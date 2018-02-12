@@ -1,0 +1,100 @@
+<?php
+namespace application\controllers;
+use \library\MVC as l;
+use \application\models as m;
+
+class Validate extends l\Controller {
+
+        private $id_user;
+        private $val_key;
+        private $err_msg;
+
+        private $_modelUser;
+        private $_modelUserVal;
+        private $_mail;
+
+        function DefaultAction() {
+            require_once(DIR_VIEW."SendMail.php");
+        }
+
+        function KeyAction($id_user, $key) {
+            if(!is_numeric($id_user) || strlen($key) < 128) exit(header('Location: '.MVC_ROOT.'/Error/Error/404'));
+
+            $this->id_user = $id_user;
+            $this->val_key = $key;
+
+            $this->_modelUserVal = new m\UserValidation($this->id_user);
+
+            if(!($this->_modelUserVal->getKey())) { // Unable to find key
+                exit(header('Location: '.MVC_ROOT.'/Error/Error/404'));
+			}
+
+            if($this->_modelUserVal->getKey() != $this->val_key) {
+                // Different key, send a new mail ?
+                $this->err_msg = self::$txt->Validate->message;
+                require_once(DIR_VIEW."Validate.php");
+            }
+            else {
+                // Same keys, validate account
+                $this->_modelUserVal->Delete();
+                $_SESSION['id'] = $this->id_user;
+                if(isset($_SESSION['validate'])) {
+                    unset($_SESSION['validate']);
+				}
+				// Ok, account is validated, log out user
+                header('Location: '.MVC_ROOT.'/Logout/?val=ok');
+            }
+        }
+
+        function SendMailAction() {
+        // Send AGAIN registration mail with validation key
+            sleep(1);
+            if(isset($_SESSION['id'])) {
+                // If logged
+
+                // One mail per minute
+                $w = 0;
+                if(isset($_SESSION['sendMail'])) {
+                    if($_SESSION['sendMail']+60 > time()) {
+                        $w = 1;
+                        $this->err_msg = self::$txt->Validate->wait;
+                        require_once(DIR_VIEW."Validate.php");
+                    }
+                }
+
+                if($w === 0) {
+                    // Allowed to send a new mail
+                    $this->_modelUserVal = new m\UserValidation($_SESSION['id']);
+                    if(!($this->_modelUserVal->getKey())) exit(header('Location: '.MVC_ROOT.'/Error/Error/404'));
+
+                    $this->_modelUser = new m\Users($_SESSION['id']);
+                    if(!($user_mail = $this->_modelUser->getEmail())) exit(header('Location: '.MVC_ROOT.'/Error/Error/404'));
+
+                    $key = hash('sha512', uniqid(rand(), true));
+
+                    $this->_modelUserVal->val_key = $key;
+                    $this->_modelUserVal->Update();
+
+                    $this->_mail = new l\Mail();
+                    $this->_mail->_to = $user_mail;
+                    $this->_mail->_subject = self::$txt->Register->subject;
+                    $this->_mail->_message = str_replace(
+                        array("[id_user]", "[key]", "[url_app]"),
+                        array($_SESSION['id'], $key, URL_APP),
+                        self::$txt->Register->message
+                    );
+                    $this->_mail->send();
+                    $_SESSION['sendMail'] = time();
+
+                    $this->err_msg = self::$txt->Global->mail_sent;
+                    require_once(DIR_VIEW."Validate.php");
+                }
+            }
+            else {
+                // If not logged
+                // Redirect to login page and after to this method again
+                header('Location: '.MVC_ROOT.'/Login');
+            }
+        }
+    };
+?>
