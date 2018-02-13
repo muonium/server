@@ -25,17 +25,25 @@ class Controller {
 		'zh-cn' => '简体中文'
     ];
 
+	// Default response (bad request)
+	const RESP = [
+		'code' => 400,
+		'status' => 'error',
+		'data' => [],
+		'message' => null,
+		'token' => null
+	];
+
     // Constructor loads user language json
     function __construct($tab = '') {
+		$this->redis = new \Predis\Client($this->addr);
         if(is_array($tab)) {
             if(array_key_exists('mustBeLogged', $tab)) {
-				$this->redis = new \Predis\Client($this->addr);
                 if($tab['mustBeLogged'] === true && !isset($_SESSION['id'])) {
                     exit(header('Location: '.MVC_ROOT.'/Login'));
                 }
             }
             if(array_key_exists('mustBeValidated', $tab)) {
-				$this->redis = new \Predis\Client($this->addr);
                 if($tab['mustBeValidated'] === true && isset($_SESSION['validate'])) {
                     exit(header('Location: '.MVC_ROOT.'/Validate'));
                 }
@@ -78,7 +86,7 @@ class Controller {
 		return $html;
     }
 
-	private function buildToken($userId) {
+	public function buildToken($userId) {
 		$secretKey  = \config\secretKey::get();
 		$jti        = base64_encode(mcrypt_create_iv(32));
 		$issuedAt   = time();
@@ -101,11 +109,10 @@ class Controller {
 		$this->redis->set('token:'.$jti.':iat', $issuedAt);
 		$this->redis->append('uid:'.$userId, $jti.';');
 
-		$encoded = \Firebase\JWT\JWT::encode($data, $secretKey, 'HS384');
-		return json_encode(['jwt' => $encoded]);
+		return \Firebase\JWT\JWT::encode($data, $secretKey, 'HS384');
 	}
 
-	private function removeToken($jti, $userId) {
+	public function removeToken($jti, $userId) {
 		if($uidTokens = $this->redis->get('uid:'.$userId)) {
 			$uidTokens = str_replace($jti.';', '', $uidTokens);
 			if(strlen($uidTokens) > 0) {
@@ -119,11 +126,11 @@ class Controller {
 		return $this->redis->del('token:'.$jti);
 	}
 
-	private function removeTokens($userId) {
+	public function removeTokens($userId) {
 		return $this->redis->del('uid:'.$userId);
 	}
 
-	private function verifyToken($token) {
+	public function verifyToken($token) {
 		// Valid : return the token or a new token
 		// Not valid : return false
 		$secretKey = \config\secretKey::get();

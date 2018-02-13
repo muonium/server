@@ -6,3 +6,5 @@ config/secretKey.php
 public
 tmp/*
 vendor/*
+README.md
+application/controllers/test.php

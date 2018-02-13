@@ -113,6 +113,9 @@ class httpMethodsData {
 	public static function getValue($return = 'object', $method = null) { // Alias
 		return self::getValues($return, $method);
 	}
+	public static function getData($return = 'object', $method = null) { // Alias
+		return self::getValues($return, $method);
+	}
 
     /* Get data sent with post in an object */
     public static function post($return = 'object') {
