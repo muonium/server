@@ -127,6 +127,7 @@ class Login extends l\Controller {
             echo htmlentities(self::$txt->Register->form);
         }
     }
+	
     function DefaultAction() {
         if(!empty($_SESSION['id'])) exit(header('Location: '.MVC_ROOT.'/Error/Error/404'));
 

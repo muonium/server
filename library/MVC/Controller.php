@@ -10,7 +10,7 @@ class Controller {
     public static $userLanguage = DEFAULT_LANGUAGE;
 
 	private $redis;
-	private $addr = 'tcp://10.0.0.1:6379';
+	private $addr = 'tcp://127.0.0.1:6379';
 	private $exp = 1200;
 
     // Available languages
@@ -29,13 +29,13 @@ class Controller {
     function __construct($tab = '') {
         if(is_array($tab)) {
             if(array_key_exists('mustBeLogged', $tab)) {
-				$this->redis = new Predis\Client($this->addr);
+				$this->redis = new \Predis\Client($this->addr);
                 if($tab['mustBeLogged'] === true && !isset($_SESSION['id'])) {
                     exit(header('Location: '.MVC_ROOT.'/Login'));
                 }
             }
             if(array_key_exists('mustBeValidated', $tab)) {
-				$this->redis = new Predis\Client($this->addr);
+				$this->redis = new \Predis\Client($this->addr);
                 if($tab['mustBeValidated'] === true && isset($_SESSION['validate'])) {
                     exit(header('Location: '.MVC_ROOT.'/Validate'));
                 }
