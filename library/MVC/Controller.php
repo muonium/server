@@ -12,6 +12,7 @@ class Controller {
 	private $redis;
 	private $addr = 'tcp://127.0.0.1:6379';
 	private $exp = 1200;
+	private $decoded = null;
 
     // Available languages
     public static $languages = [
@@ -109,6 +110,7 @@ class Controller {
 		$this->redis->set('token:'.$jti.':iat', $issuedAt);
 		$this->redis->append('uid:'.$userId, $jti.';');
 
+		$this->decoded = $data;
 		return \Firebase\JWT\JWT::encode($data, $secretKey, 'HS384');
 	}
 
@@ -130,28 +132,39 @@ class Controller {
 		return $this->redis->del('uid:'.$userId);
 	}
 
-	public function verifyToken($token) {
+	public function verifyToken($token, $auto_generate = true) {
 		// Valid : return the token or a new token
 		// Not valid : return false
 		$secretKey = \config\secretKey::get();
 		if(strlen($token) < 1) return false;
+		$decoded = null;
 		try {
-        	$decoded = \Firebase\JWT\JWT::decode($token,  $secretKey, 'HS384');
+        	$decoded = \Firebase\JWT\JWT::decode($token,  $secretKey, ['HS384']);
 		} catch(\Exception $e) {
-    		if(is_array($decoded) && isset($decoded['jti']) && isset($decoded['data']['uid'])) {
-				$this->removeToken($decoded['jti'], $decoded['data']['uid']);
+    		if(is_object($decoded) && isset($decoded->jti) && isset($decoded->data->uid)) {
+				$this->decoded = json_decode(json_encode($decoded), true); // Cast to array (recursively)
+				$this->removeToken($decoded->jti, $decoded->data->uid);
 			}
 			return false;
 		}
+		$this->decoded = json_decode(json_encode($decoded), true); // Cast to array (recursively)
 
-		if($this->redis->exists('token:'.$decoded['jti']) !== true) {
+		if(!$this->redis->exists('token:'.$decoded->jti)) {
 			return false;
 		}
 
-		if($decoded['exp'] <= time()+$this->exp/2) {
-			$this->removeToken($decoded['jti'], $decoded['data']['uid']);
-			$token = $this->buildToken($decoded['data']['uid']);
+		if($decoded->exp <= time()+$this->exp/2) {
+			$this->removeToken($decoded->jti, $decoded->data->uid);
+			if($auto_generate === false) { // Do not generate a new token
+				return false;
+			}
+			$token = $this->buildToken($decoded->data->uid);
 		}
 		return $token;
+	}
+
+	public function getDecodedToken() {
+		// Return the decoded token sent by user (encoded), /!\ it can be expired or removed, check the validity before
+		return $this->decoded;
 	}
 }
