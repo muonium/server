@@ -38,13 +38,6 @@ function echo_h($str) {
     echo htmlentities($str, ENT_QUOTES);
 }
 
-// Banned session (anti-bruteforce)
-/*if(!empty($_SESSION['banSID'])) {
-    $err = new l\Languages();
-    echo_h($err->txt->Error->bannedSession);
-    exit;
-}*/
-
 require_once("library/MVC/Functions.php");
 /* ROUTING */
 $_routing = l\Routing::getInstance();

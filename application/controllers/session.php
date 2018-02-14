@@ -27,10 +27,6 @@ class session extends l\Controller {
 		}
 		elseif(isset($data->uid) && isset($data->password) && isset($data->code)) {
 			if(is_numeric($data->uid) && strlen($data->code) === 8) {
-				$brute = new l\AntiBruteforce();
-	            $brute->setFolder(ROOT.DS."tmp");
-	            $brute->setNbMaxAttemptsPerHour(50);
-
 				$user = new m\Users($data->uid);
 				$user->password = $data->password;
 				$pass = $user->getPassword();
@@ -55,10 +51,8 @@ class session extends l\Controller {
 							$resp['data']['cek'] = $cek;
 						} else {
 							// Wrong code
-		                    $brute->setSID('doubleAuth');
-		                    $brute->Control();
 							$resp['code'] = 401;
-		                    $resp['message'] = 'bruteforceErr'.$brute->getError();
+		                    $resp['message'] = 'badCode';
 		                }
 					}
 					else {
@@ -70,11 +64,9 @@ class session extends l\Controller {
 					}
 				}
 				else {
-					// UID exists but incorrect password - Anti bruteforce with user id
-                	$brute->setId($data->uid);
-                	$brute->Control();
+					// UID exists but incorrect password
 					$resp['code'] = 401;
-                	$resp['message'] = 'bruteforceErr'.$brute->getError();
+                	$resp['message'] = 'badPass';
 				}
 			}
 		} else {
@@ -100,16 +92,11 @@ class session extends l\Controller {
 			}
 
 			$new_user->password = $data->password;
-            $brute = new l\AntiBruteforce();
-            $brute->setFolder(ROOT.DS."tmp");
-            $brute->setNbMaxAttemptsPerHour(50);
 
 			if(!($id = $new_user->getId())) {
-                // User doesn't exists - Anti bruteforce with session id
-                $brute->setSID();
-                $brute->Control();
+                // User doesn't exists
 				$resp['code'] = 401;
-                $resp['message'] = 'bruteforceErr'.$brute->getError();
+                $resp['message'] = 'badUser';
             }
 			else {
                 $new_user->id = $id;
@@ -152,11 +139,9 @@ class session extends l\Controller {
                     }
                 }
 
-				// User exists but incorrect password - Anti bruteforce with user id
-                $brute->setId($id);
-                $brute->Control();
+				// User exists but incorrect password
 				$resp['code'] = 401;
-                $resp['message'] = 'bruteforceErr'.$brute->getError();
+                $resp['message'] = 'badPass';
 			}
 		}
 		else {
