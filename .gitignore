@@ -4,7 +4,8 @@ config/confMail.php
 config/confPayments.php
 config/secretKey.php
 public
+doc/*
 tmp/*
 vendor/*
-README.md
+/README.md
 application/controllers/test.php

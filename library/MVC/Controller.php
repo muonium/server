@@ -1,5 +1,6 @@
 <?php
 namespace library\MVC;
+use \library as h;
 
 class Controller {
     // This class is called by all controllers (with "extends")
@@ -13,6 +14,10 @@ class Controller {
 	private $addr = 'tcp://127.0.0.1:6379';
 	private $exp = 1200;
 	private $decoded = null;
+
+	// Current token and UID - can be used in controllers that require a logged user
+	public $_token = null;
+	public $_uid = null;
 
     // Available languages
     public static $languages = [
@@ -38,16 +43,25 @@ class Controller {
     // Constructor loads user language json
     function __construct($tab = '') {
 		$this->redis = new \Predis\Client($this->addr);
+		$resp = self::RESP;
         if(is_array($tab)) {
-            if(array_key_exists('mustBeLogged', $tab)) {
-                if($tab['mustBeLogged'] === true && !isset($_SESSION['id'])) {
-                    exit(header('Location: '.MVC_ROOT.'/Login'));
-                }
-            }
-            if(array_key_exists('mustBeValidated', $tab)) {
-                if($tab['mustBeValidated'] === true && isset($_SESSION['validate'])) {
-                    exit(header('Location: '.MVC_ROOT.'/Validate'));
-                }
+			// Authentication middleware
+            if(array_key_exists('mustBeLogged', $tab) && $tab['mustBeLogged'] === true) {
+				$token = h\httpMethodsData::getToken();
+				if($token !== null) {
+					$token = $this->verifyToken($token);
+					if($token !== false) { // Token is still valid
+						$decodedToken = $this->getDecodedToken();
+						$this->_uid = $decodedToken['data']['uid'];
+						$this->_token = $token;
+						return true;
+					}
+				}
+				// Not authorized
+				header("Content-type: application/json");
+				$resp['code'] = 401;
+				http_response_code($resp['code']);
+				exit(json_encode($resp));
             }
         }
         // Get user language
@@ -86,6 +100,10 @@ class Controller {
         $html .= '</select>';
 		return $html;
     }
+
+	public function getRedis() {
+		return $this->redis;
+	}
 
 	public function buildToken($userId) {
 		$secretKey  = \config\secretKey::get();

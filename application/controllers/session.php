@@ -119,11 +119,15 @@ class session extends l\Controller {
                                 $code = $this->generateCode();
                                 $new_user->updateCode($code);
                                 $mail = new l\Mail();
+								$mail->delay(60, $id, $this->getRedis());
                                 $mail->_to = $e;
                                 $mail->_subject = "Muonium - ".self::$txt->Profile->doubleAuth;
                                 $mail->_message = str_replace("[key]", $code, self::$txt->Login->doubleAuthMessage);
-                                $mail->send();
-								$resp['message'] = 'doubleAuth';
+                                if($mail->send() === 'wait') {
+									$resp['message'] = 'wait';
+								} else {
+									$resp['message'] = 'doubleAuth';
+								}
                             }
                             else { // Logged
 								$resp['token'] = $this->buildToken($id);

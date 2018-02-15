@@ -5,6 +5,11 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 class Mail {
+	private $redis = null;
+	private $uid = null;
+	private $delay = 0;
+	private $nbf = 0;
+
     protected $_to;
     protected $_subject;
     protected $_message;
@@ -13,7 +18,27 @@ class Mail {
         $this->$attr = $val;
     }
 
+	function delay($delay, $uid, $redis) {
+		// Add a delay before sending a new mail (spam protection)
+		$this->delay = $delay;
+		$this->uid = $uid;
+		$this->redis = $redis;
+
+		$lastMail = $redis->get('uid:'.$uid.':mailnbf');
+		if(!$lastMail) $lastMail = 0;
+		$this->nbf = intval($lastMail);
+	}
+
     function send() {
+		if($this->uid !== null && $this->redis !== null) {
+			// Spam protection - return 'wait' if nbf > current time
+			if($this->nbf > time()) {
+				return 'wait';
+			}
+			$this->nbf = time() + $this->delay;
+			$this->redis->set('uid:'.$this->uid.':mailnbf', $this->nbf);
+		}
+
         $passage_line = "\n";
         // We filter servers that encounter bugs.
         if (!preg_match("#^[a-z0-9._-]+@(hotmail|live|msn).[a-z]{2,4}$#", $this->_to)) {
@@ -24,7 +49,7 @@ class Mail {
         $message_txt = strip_tags(str_replace(['<br>','<br />','<br/>'], $passage_line, $this->_message));
         $message_html = $this->_message;
 
-        $mail = new \PHPMailer();
+        $mail = new PHPMailer();
         //$mail->SMTPDebug = 3; // Debug
         $mail->isSMTP();
         $mail->Host = conf\confMail::smtp_host;
@@ -51,5 +76,6 @@ class Mail {
             ]
         ];
         $mail->send();
+		return 'sent';
     }
 }
