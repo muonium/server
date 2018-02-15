@@ -138,7 +138,7 @@ class Controller {
 			if(strlen($uidTokens) > 0) {
 				$this->redis->set('uid:'.$userId, $uidTokens);
 			} else {
-				$this->removeTokens($userId);
+				$this->redis->del('uid:'.$userId);
 			}
 		}
 		$this->redis->del('token:'.$jti.':uid');
@@ -147,6 +147,15 @@ class Controller {
 	}
 
 	public function removeTokens($userId) {
+		if($uidTokens = $this->redis->get('uid:'.$userId)) {
+			$uidTokens = substr($uidTokens, -1) === ';' ? substr($uidTokens, 0, -1) : $uidTokens;
+			$uidTokens = explode(';', $uidTokens);
+			foreach($uidTokens as $jti) {
+				$this->redis->del('token:'.$jti.':uid');
+				$this->redis->del('token:'.$jti.':iat');
+				$this->redis->del('token:'.$jti);
+			}
+		}
 		return $this->redis->del('uid:'.$userId);
 	}
 
