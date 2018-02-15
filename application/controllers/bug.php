@@ -4,7 +4,7 @@ use \library as h;
 use \library\MVC as l;
 use \application\models as m;
 
-class Bug extends l\Controller {
+class bug extends l\Controller {
 
     private $_modelUser;
     private $_mail;
