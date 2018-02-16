@@ -8,9 +8,7 @@ class session extends l\Controller {
     private $_message;
 
 	function __construct() {
-        parent::__construct([
-            //'mustBeLogged' => false
-        ]);
+        parent::__construct();
     }
 
     function authcodeAction() {
@@ -24,6 +22,9 @@ class session extends l\Controller {
 
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif($this->isLogged() === true || is_numeric($this->_uid)) {
+			// User is already logged
 		}
 		elseif(isset($data->uid) && isset($data->password) && isset($data->code)) {
 			if(is_numeric($data->uid) && strlen($data->code) === 8) {
@@ -80,6 +81,9 @@ class session extends l\Controller {
 	private function login($resp) {
 		sleep(2);
 		$data = h\httpMethodsData::getValues();
+		if($this->isLogged() === true || is_numeric($this->_uid)) {
+			return $resp;
+		}
 		if(isset($data->username) && isset($data->password)) {
 			$new_user = new m\Users();
 
@@ -173,18 +177,14 @@ class session extends l\Controller {
 	}
 
 	private function get($resp) {
-		$token = h\httpMethodsData::getToken();
-		if($token === null) {
+		if($this->isLogged() === false || !is_numeric($this->_uid)) {
 			return $resp;
 		}
-		$token = $this->verifyToken($token);
-		if($token !== false) { // Token is still valid
-			$decodedToken = $this->getDecodedToken();
-			$resp['code'] = 200;
-			$resp['status'] = 'success';
-			$resp['token'] = $token; // Send it in the response because a new one could be generated when verifying
-			$resp['data']['uid'] = $decodedToken['data']['uid'];
-		}
+		// Token is still valid
+		$resp['code'] = 200;
+		$resp['status'] = 'success';
+		$resp['token'] = $this->_token; // Send it in the response because a new one could be generated when verifying
+		$resp['data']['uid'] = $this->_uid;
 		return $resp;
 	}
 

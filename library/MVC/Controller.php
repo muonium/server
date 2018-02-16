@@ -12,7 +12,8 @@ class Controller {
 
 	private $redis;
 	private $addr = 'tcp://127.0.0.1:6379';
-	private $exp = 1200;
+	//private $exp = 1200;
+	private $exp = 120000; // dev
 	private $decoded = null;
 
 	// Current token and UID - can be used in controllers that require a logged user
@@ -47,15 +48,8 @@ class Controller {
         if(is_array($tab)) {
 			// Authentication middleware
             if(array_key_exists('mustBeLogged', $tab) && $tab['mustBeLogged'] === true) {
-				$token = h\httpMethodsData::getToken();
-				if($token !== null) {
-					$token = $this->verifyToken($token);
-					if($token !== false) { // Token is still valid
-						$decodedToken = $this->getDecodedToken();
-						$this->_uid = $decodedToken['data']['uid'];
-						$this->_token = $token;
-						return true;
-					}
+				if($this->isLogged()) {
+					return true;
 				}
 				// Not authorized
 				header("Content-type: application/json");
@@ -100,6 +94,25 @@ class Controller {
         $html .= '</select>';
 		return $html;
     }
+
+	public function isLogged() {
+		/* A "high level" method to check the validity of token, set _uid and _token and return true if the user is logged or false.
+		   Inside controllers, it's the equivalent of parent::__construct(['mustBeLogged' => true]); for constructors but it can be used inside methods
+		   and instead of constructor which returns true if logged and 401 Error when not logged, it returns only true and false.
+		*/
+		$token = h\httpMethodsData::getToken();
+		if($token !== null) {
+			$token = $this->verifyToken($token);
+			if($token !== false) { // Token is still valid
+				$decodedToken = $this->getDecodedToken();
+				$this->_uid = $decodedToken['data']['uid'];
+				$this->_token = $token;
+				return true;
+			}
+		}
+		// Not authorized
+		return false;
+	}
 
 	public function getRedis() {
 		return $this->redis;

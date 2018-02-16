@@ -124,6 +124,15 @@ class Users extends l\Model {
         return $res['auth_code'];
     }
 
+	function getInfos() {
+		if($this->id === null) return false;
+		$req = self::$_sql->prepare("SELECT id, login, email, registration_date, double_auth FROM users WHERE id = ?");
+		$req->execute([$this->id]);
+        if($req->rowCount() === 0) return false;
+        $res = $req->fetch(\PDO::FETCH_ASSOC);
+        return $res;
+	}
+
     function EmailExists($email = null) {
 		$email = $email === null ? $this->email : $email;
 		if($email === null) return false;
