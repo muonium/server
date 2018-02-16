@@ -18,6 +18,150 @@ class user extends l\Controller {
         parent::__construct();
     }
 
+	public function changeLoginAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif($this->isLogged() === true && isset($data->login)) {
+			$login = urldecode($data->login);
+			if(preg_match("/^[A-Za-z0-9_.-]{2,19}$/", $login)) {
+				$this->_modelUser = new m\Users($this->_uid);
+				$this->_modelUser->login = $login;
+				if(!($this->_modelUser->LoginExists())) {
+					if($this->_modelUser->updateLogin()) {
+						$resp['code'] = 200;
+						$resp['status'] = 'success';
+					}
+				} else {
+					$resp['message'] = 'loginExists';
+				}
+			} else {
+				$resp['message'] = 'loginFormat';
+			}
+		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+	}
+
+	public function changeMailAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif($this->isLogged() === true && isset($data->mail)) {
+			$mail = urldecode($data->mail);
+			if(strlen($mail) > 2 && filter_var($mail, FILTER_VALIDATE_EMAIL)) {
+				$this->_modelUser = new m\Users($this->_uid);
+				$this->_modelUser->email = $mail;
+				if(!($this->_modelUser->EmailExists())) {
+					if($this->_modelUser->updateMail()) {
+						$resp['code'] = 200;
+						$resp['status'] = 'success';
+					}
+				} else {
+					$resp['message'] = 'mailExists';
+				}
+			} else {
+				$resp['message'] = 'mailFormat';
+			}
+		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+	}
+
+	public function changePasswordAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif($this->isLogged() === true && isset($data->old_pwd) && isset($data->new_pwd)) {
+            $this->_modelUser = new m\Users($this->_uid);
+            if($user_pwd = $this->_modelUser->getPassword()) {
+				$old_pwd = urldecode($data->old_pwd);
+                if(password_verify($old_pwd, $user_pwd)) {
+                    $this->_modelUser->password = password_hash(urldecode($data->new_pwd), PASSWORD_BCRYPT);
+                    if($this->_modelUser->updatePassword()) {
+						$resp['code'] = 200;
+						$resp['status'] = 'success';
+                    }
+                } else {
+                    $resp['message'] = 'badOldPass';
+                }
+            }
+        }
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+    }
+
+	public function changeCekAction() {
+		/*
+			- receive the new base64encoded encrypted CEK
+			- store it in the database
+			- DO NOT FORGET: THE PASSPHRASE MUST NOT BE SENT TO THE SERVERS!!!!!
+			- keep the cek as an urlencoded string, it's urldecoded at the frontend anyway
+		*/
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif($this->isLogged() === true && isset($data->cek)) {
+			$this->_modelUser = new m\Users($this->_uid);
+			$this->_modelUser->cek = $data->cek;
+			if($this->_modelUser->updateCek()) { // try to update
+				$resp['code'] = 200;
+				$resp['status'] = 'success';
+			}
+		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+	}
+
+	public function changeAuthAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif($this->isLogged() === true) {
+	        $this->_modelUser = new m\Users($this->_uid);
+	        $s = 0;
+	        if(isset($data->doubleAuth) && $data->doubleAuth == 'true') {
+				$s = 1;
+			}
+	        if($this->_modelUser->updateDoubleAuth($s)) {
+				$resp['code'] = 200;
+				$resp['status'] = 'success';
+	        }
+		}
+		
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+    }
+
 	private function delete($resp) {
 		function removeDirectory($path) {
 			$files = glob($path . '/*');
@@ -65,7 +209,7 @@ class user extends l\Controller {
 	}
 
 	private function get($resp) {
-		if($this->isLogged() === false || !is_numeric($this->_uid)) {
+		if($this->isLogged() === false) {
 			return $resp;
 		}
 		$resp['token'] = $this->_token;

@@ -23,56 +23,56 @@ class session extends l\Controller {
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
-		elseif($this->isLogged() === true || is_numeric($this->_uid)) {
-			// User is already logged
-		}
-		elseif(isset($data->uid) && isset($data->password) && isset($data->code)) {
-			if(is_numeric($data->uid) && strlen($data->code) === 8) {
-				$user = new m\Users($data->uid);
-				$user->password = $data->password;
-				$pass = $user->getPassword();
-				$cek = $user->getCek();
+		elseif($this->isLogged() === false) {
+			// User is not logged
+			if(isset($data->uid) && isset($data->password) && isset($data->code)) {
+				if(is_numeric($data->uid) && strlen($data->code) === 8) {
+					$user = new m\Users($data->uid);
+					$user->password = $data->password;
+					$pass = $user->getPassword();
+					$cek = $user->getCek();
 
-				if($pass !== false && password_verify($user->password, $pass)) {
-					// Password is ok
-					$user->updateLastConnection();
-					$mUserVal = new m\UserValidation($data->uid);
-					if($mUserVal->getKey()) {
-						// Key found - User needs to validate its account (double auth only for validated accounts)
-						$resp['code'] = 401;
-						$resp['message'] = 'validate';
-					}
-					elseif($user->getDoubleAuth()) {
-						$code = $user->getCode();
-						if($code && $code === $data->code) {
-							// Double auth code is ok, send token
+					if($pass !== false && password_verify($user->password, $pass)) {
+						// Password is ok
+						$user->updateLastConnection();
+						$mUserVal = new m\UserValidation($data->uid);
+						if($mUserVal->getKey()) {
+							// Key found - User needs to validate its account (double auth only for validated accounts)
+							$resp['code'] = 401;
+							$resp['message'] = 'validate';
+						}
+						elseif($user->getDoubleAuth()) {
+							$code = $user->getCode();
+							if($code && $code === $data->code) {
+								// Double auth code is ok, send token
+								$resp['code'] = 200;
+								$resp['status'] = 'success';
+								$resp['token'] = $this->buildToken($data->uid);
+								$resp['data']['cek'] = $cek;
+							} else {
+								// Wrong code
+								$resp['code'] = 401;
+			                    $resp['message'] = 'badCode';
+			                }
+						}
+						else {
+							// Double auth is disabled but password is still ok, then, send token
 							$resp['code'] = 200;
 							$resp['status'] = 'success';
 							$resp['token'] = $this->buildToken($data->uid);
 							$resp['data']['cek'] = $cek;
-						} else {
-							// Wrong code
-							$resp['code'] = 401;
-		                    $resp['message'] = 'badCode';
-		                }
+						}
 					}
 					else {
-						// Double auth is disabled but password is still ok, then, send token
-						$resp['code'] = 200;
-						$resp['status'] = 'success';
-						$resp['token'] = $this->buildToken($data->uid);
-						$resp['data']['cek'] = $cek;
+						// UID exists but incorrect password
+						$resp['code'] = 401;
+	                	$resp['message'] = 'badPass';
 					}
 				}
-				else {
-					// UID exists but incorrect password
-					$resp['code'] = 401;
-                	$resp['message'] = 'badPass';
-				}
-			}
-		} else {
-            $resp['message'] = 'emptyField';
-        }
+			} else {
+	            $resp['message'] = 'emptyField';
+	        }
+		}
 
 		http_response_code($resp['code']);
 		echo json_encode($resp);
@@ -177,7 +177,7 @@ class session extends l\Controller {
 	}
 
 	private function get($resp) {
-		if($this->isLogged() === false || !is_numeric($this->_uid)) {
+		if($this->isLogged() === false) {
 			return $resp;
 		}
 		// Token is still valid
