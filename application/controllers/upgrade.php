@@ -1,42 +1,43 @@
 <?php
 namespace application\controllers;
+use \library as h;
 use \library\MVC as l;
 use \application\models as m;
 use \config as conf;
 
-class Upgrade extends l\Controller {
+class upgrade extends l\Controller {
 	private $_modelUpgrade;
 	private $_modelStoragePlans;
 
     function __construct() {
         parent::__construct([
-            'mustBeLogged' => true,
-            'mustBeValidated' => true
+            //'mustBeLogged' => true
         ]);
-		$this->_modelUpgrade = new m\Upgrade($_SESSION['id']);
+		$this->_modelUpgrade = new m\Upgrade($this->_uid);
 		$this->_modelStoragePlans = new m\StoragePlans();
     }
 
-    function DefaultAction() {
-		$offers = '';
-		$endpoint = 'https://www.coinpayments.net/index.php';
+    public function getPlansAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$resp['token'] = $this->_token;
+
+		$resp['code'] = 200;
+		$resp['status'] = 'success';
+
+		$resp['data']['endpoint'] = 'https://www.coinpayments.net/index.php';
+		$resp['data']['plans'] = [];
 		$merchant_id = conf\confPayments::merchant_id;
 		$ipn_url = conf\confPayments::ipn_url;
 
 		$storage_plans = $this->_modelStoragePlans->getPlans();
-		$i = 0;
 		foreach($storage_plans as $plan) {
-			$product_name = showSize($plan['size']).' - '.$plan['price'].' '.strtoupper($plan['currency']).' - '.$this->duration($plan['duration']);
-			$offers .= '<div>';
-
-			if($i === 0) $offers .= '<div class="most-popular">Most Popular</div>';
-			$offers .= '<div class="offer-size">'.showSize($plan['size']).'</div>';
-			$offers .= '<div class="offer-price"><span class="currency">'.currencySymbol($plan['currency']).'</span>'.number_format($plan['price'], 2).'</div>';
-			$offers .= '<div class="offer-duration">'.$this->duration($plan['duration']).'</div>';
-
 			if($plan['product_id'] !== null) {
+				$product_name = showSize($plan['size']).' - '.$plan['price'].' '.strtoupper($plan['currency']).' - '.$this->duration($plan['duration']);
 
-				$fields = [
+				$plan['fields'] = [
 					'cmd' => '_pay_simple',
 					'merchant' => $merchant_id,
 					'item_name' => $product_name,
@@ -44,39 +45,50 @@ class Upgrade extends l\Controller {
 					'currency' => strtolower($plan['currency']),
 					'amountf' => floatval($plan['price']),
 					'ipn_url' => $ipn_url,
-					'success_url' => URL_APP.'/Upgrade/?success=ok',
+					'success_url' => URL_APP.'/upgrade/?success=ok',
 					'cancel_url' => '',
-					'custom'  => $_SESSION['id'],
+					'custom'  => $this->_uid,
 					'want_shipping' => '0'
 				];
-
-				$offers .= '<form action="'.$endpoint.'" method="post" target="_blank">';
-				foreach($fields as $name => $value) {
-					$offers .= '<input type="hidden" name="'.$name.'" value="'.$value.'">';
-				}
-				$offers .= '<button type="submit" class="btn">'.self::$txt->Upgrade->upgrade.'</button>';
-				$offers .= '</form>';
+				unset($plan['id']);
+				$resp['data']['plans'][] = $plan;
 			}
-			$offers .= '</div>';
-			$i++;
 		}
 
-		$history = '';
-		$upgrades = $this->_modelUpgrade->getUpgrades();
-		foreach($upgrades as $upgrade) {
-			$history .= '<tr>';
-			$history .= '<td>'.showSize($upgrade['size']).'</td>';
-			$history .= '<td>'.$upgrade['price'].' '.currencySymbol($upgrade['currency']).'</td>';
-			$history .= '<td>'.date(self::$txt->Dates->date.' '.self::$txt->Dates->time, $upgrade['start']).'</td>';
-			$history .= '<td>'.date(self::$txt->Dates->date.' '.self::$txt->Dates->time, $upgrade['end']).'</td>';
-			$history .= '<td class="red fit-width">';
-			if($upgrade['removed'] === 1) $history .= self::$txt->Upgrade->expired;
-			$history .= '</td></tr>';
-		}
-		$msg = isset($_GET['success']) ? '<p class="green">'.self::$txt->Upgrade->success_msg.'</p>' : '';
-
-		require_once(DIR_VIEW."Upgrade.php");
+		http_response_code($resp['code']);
+		echo json_encode($resp);
     }
+
+	public function getHistoryAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$resp['token'] = $this->_token;
+
+		if($upgrades = $this->_modelUpgrade->getUpgrades()) {
+			foreach($upgrades as $i => $upgrade) {
+				unset($upgrade['id']);
+				unset($upgrade['id_user']);
+				$upgrades[$i] = $upgrade;
+			}
+			$resp['code'] = 200;
+			$resp['status'] = 'success';
+			$resp['data'] = $upgrades;
+		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+	}
+
+	public function DefaultAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$resp['token'] = $this->_token;
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+	}
 
 	function duration($duration) {
 		if($duration < 0) return self::$txt->Upgrade->lifetime;

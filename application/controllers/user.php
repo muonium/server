@@ -28,6 +28,7 @@ class user extends l\Controller {
 			$resp['code'] = 405; // Method Not Allowed
 		}
 		elseif($this->isLogged() === true && isset($data->login)) {
+			$resp['token'] = $this->_token;
 			$login = urldecode($data->login);
 			if(preg_match("/^[A-Za-z0-9_.-]{2,19}$/", $login)) {
 				$this->_modelUser = new m\Users($this->_uid);
@@ -59,6 +60,7 @@ class user extends l\Controller {
 			$resp['code'] = 405; // Method Not Allowed
 		}
 		elseif($this->isLogged() === true && isset($data->mail)) {
+			$resp['token'] = $this->_token;
 			$mail = urldecode($data->mail);
 			if(strlen($mail) > 2 && filter_var($mail, FILTER_VALIDATE_EMAIL)) {
 				$this->_modelUser = new m\Users($this->_uid);
@@ -90,6 +92,7 @@ class user extends l\Controller {
 			$resp['code'] = 405; // Method Not Allowed
 		}
 		elseif($this->isLogged() === true && isset($data->old_pwd) && isset($data->new_pwd)) {
+			$resp['token'] = $this->_token;
             $this->_modelUser = new m\Users($this->_uid);
             if($user_pwd = $this->_modelUser->getPassword()) {
 				$old_pwd = urldecode($data->old_pwd);
@@ -125,6 +128,7 @@ class user extends l\Controller {
 			$resp['code'] = 405; // Method Not Allowed
 		}
 		elseif($this->isLogged() === true && isset($data->cek)) {
+			$resp['token'] = $this->_token;
 			$this->_modelUser = new m\Users($this->_uid);
 			$this->_modelUser->cek = $data->cek;
 			if($this->_modelUser->updateCek()) { // try to update
@@ -147,6 +151,7 @@ class user extends l\Controller {
 			$resp['code'] = 405; // Method Not Allowed
 		}
 		elseif($this->isLogged() === true) {
+			$resp['token'] = $this->_token;
 	        $this->_modelUser = new m\Users($this->_uid);
 	        $s = 0;
 	        if(isset($data->doubleAuth) && $data->doubleAuth == 'true') {
@@ -157,7 +162,7 @@ class user extends l\Controller {
 				$resp['status'] = 'success';
 	        }
 		}
-		
+
 		http_response_code($resp['code']);
 		echo json_encode($resp);
     }
