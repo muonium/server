@@ -9,6 +9,7 @@ class Mail {
 	private $uid = null;
 	private $delay = 0;
 	private $nbf = 0;
+	private $suffix = null;
 
     protected $_to;
     protected $_subject;
@@ -18,13 +19,15 @@ class Mail {
         $this->$attr = $val;
     }
 
-	function delay($delay, $uid, $redis) {
+	function delay($delay, $uid, $redis, $suffix = null) {
+		$suffix = $suffix === null ? '' : ':'.$suffix;
 		// Add a delay before sending a new mail (spam protection)
 		$this->delay = $delay;
 		$this->uid = $uid;
 		$this->redis = $redis;
+		$this->suffix = $suffix;
 
-		$lastMail = $redis->get('uid:'.$uid.':mailnbf');
+		$lastMail = $redis->get('uid:'.$uid.':mailnbf'.$suffix);
 		if(!$lastMail) $lastMail = 0;
 		$this->nbf = intval($lastMail);
 	}
@@ -36,7 +39,7 @@ class Mail {
 				return 'wait';
 			}
 			$this->nbf = time() + $this->delay;
-			$this->redis->set('uid:'.$this->uid.':mailnbf', $this->nbf);
+			$this->redis->set('uid:'.$this->uid.':mailnbf'.$this->suffix, $this->nbf);
 		}
 
         $passage_line = "\n";

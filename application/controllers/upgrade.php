@@ -11,47 +11,52 @@ class upgrade extends l\Controller {
 
     function __construct() {
         parent::__construct([
-            //'mustBeLogged' => true
+            'mustBeLogged' => true
         ]);
 		$this->_modelUpgrade = new m\Upgrade($this->_uid);
 		$this->_modelStoragePlans = new m\StoragePlans();
     }
 
-    public function getPlansAction() {
+    public function plansAction() {
 		header("Content-type: application/json");
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
 		$data = h\httpMethodsData::getValues();
 		$resp['token'] = $this->_token;
 
-		$resp['code'] = 200;
-		$resp['status'] = 'success';
+		if($method !== 'get') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		else {
+			$resp['code'] = 200;
+			$resp['status'] = 'success';
 
-		$resp['data']['endpoint'] = 'https://www.coinpayments.net/index.php';
-		$resp['data']['plans'] = [];
-		$merchant_id = conf\confPayments::merchant_id;
-		$ipn_url = conf\confPayments::ipn_url;
+			$resp['data']['endpoint'] = 'https://www.coinpayments.net/index.php';
+			$resp['data']['plans'] = [];
+			$merchant_id = conf\confPayments::merchant_id;
+			$ipn_url = conf\confPayments::ipn_url;
 
-		$storage_plans = $this->_modelStoragePlans->getPlans();
-		foreach($storage_plans as $plan) {
-			if($plan['product_id'] !== null) {
-				$product_name = showSize($plan['size']).' - '.$plan['price'].' '.strtoupper($plan['currency']).' - '.$this->duration($plan['duration']);
+			$storage_plans = $this->_modelStoragePlans->getPlans();
+			foreach($storage_plans as $plan) {
+				if($plan['product_id'] !== null) {
+					$product_name = showSize($plan['size']).' - '.$plan['price'].' '.strtoupper($plan['currency']).' - '.$this->duration($plan['duration']);
 
-				$plan['fields'] = [
-					'cmd' => '_pay_simple',
-					'merchant' => $merchant_id,
-					'item_name' => $product_name,
-					'item_number' => $plan['product_id'],
-					'currency' => strtolower($plan['currency']),
-					'amountf' => floatval($plan['price']),
-					'ipn_url' => $ipn_url,
-					'success_url' => URL_APP.'/upgrade/?success=ok',
-					'cancel_url' => '',
-					'custom'  => $this->_uid,
-					'want_shipping' => '0'
-				];
-				unset($plan['id']);
-				$resp['data']['plans'][] = $plan;
+					$plan['fields'] = [
+						'cmd' => '_pay_simple',
+						'merchant' => $merchant_id,
+						'item_name' => $product_name,
+						'item_number' => $plan['product_id'],
+						'currency' => strtolower($plan['currency']),
+						'amountf' => floatval($plan['price']),
+						'ipn_url' => $ipn_url,
+						'success_url' => URL_APP.'/upgrade/?success=ok',
+						'cancel_url' => '',
+						'custom'  => $this->_uid,
+						'want_shipping' => '0'
+					];
+					unset($plan['id']);
+					$resp['data']['plans'][] = $plan;
+				}
 			}
 		}
 
@@ -59,22 +64,27 @@ class upgrade extends l\Controller {
 		echo json_encode($resp);
     }
 
-	public function getHistoryAction() {
+	public function historyAction() {
 		header("Content-type: application/json");
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
 		$data = h\httpMethodsData::getValues();
 		$resp['token'] = $this->_token;
 
-		if($upgrades = $this->_modelUpgrade->getUpgrades()) {
-			foreach($upgrades as $i => $upgrade) {
-				unset($upgrade['id']);
-				unset($upgrade['id_user']);
-				$upgrades[$i] = $upgrade;
+		if($method !== 'get') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		else {
+			if($upgrades = $this->_modelUpgrade->getUpgrades()) {
+				foreach($upgrades as $i => $upgrade) {
+					unset($upgrade['id']);
+					unset($upgrade['id_user']);
+					$upgrades[$i] = $upgrade;
+				}
+				$resp['code'] = 200;
+				$resp['status'] = 'success';
+				$resp['data'] = $upgrades;
 			}
-			$resp['code'] = 200;
-			$resp['status'] = 'success';
-			$resp['data'] = $upgrades;
 		}
 
 		http_response_code($resp['code']);
