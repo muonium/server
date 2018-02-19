@@ -1,11 +1,9 @@
-application/views
 config/confDB.php
 config/confMail.php
 config/confPayments.php
 config/secretKey.php
 public
 doc/*
-tmp/*
 vendor/*
 /README.md
 application/controllers/test.php

@@ -27,8 +27,8 @@ class validate extends l\Controller {
 		}
 		elseif($this->isLogged() === false) {
 			if($method === 'get' && $uid !== null && $key !== null) {
-				$data->uid = urldecode($uid);
-				$data->key = urldecode($key);
+				$data->uid = $uid;
+				$data->key = $key;
 			}
 
 			if(isset($data->uid) && isset($data->key) && is_numeric($data->uid) && strlen($data->key) >= 128) {

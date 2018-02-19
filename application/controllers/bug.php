@@ -86,15 +86,15 @@ class bug extends l\Controller {
 	                        $this->_mail = new l\Mail();
 							$this->_mail->delay(60, $this->_uid, $this->getRedis());
 	                        $this->_mail->_to = "bug@muonium.ee";
-	                        $this->_mail->_subject = "[Bug report] ".$mail." - ".substr(htmlentities($data->message), 0, 20);
+	                        $this->_mail->_subject = "[Bug report] ".$mail." - ".substr(htmlspecialchars($data->message), 0, 20);
 	                        $this->_mail->_message = "====================<br>
 	                        <strong>User mail :</strong> ".$mail."<br>
 	                        <strong>User ID :</strong> ".$this->_uid."<br>
 	                        <strong>O.S :</strong> ".$os."<br>
 	                        <strong>Browser :</strong> ".$browser."<br>
-	                        <strong>Browser version :</strong> ".htmlentities($version)."
+	                        <strong>Browser version :</strong> ".htmlspecialchars($version)."
 	                        <br>====================<br>"
-	                            .nl2br(htmlentities($data->message));
+	                            .nl2br(htmlspecialchars($data->message));
 
 							$resp['message'] = $this->_mail->send(); // 'sent' or 'wait'
 						}

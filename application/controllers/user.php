@@ -240,7 +240,7 @@ class user extends l\Controller {
 					$this->_modelUser = new m\Users();
 					$this->_modelUser->email = htmlspecialchars($data->mail);
 					$this->_modelUser->password = password_hash(urldecode($data->password), PASSWORD_BCRYPT);
-					$this->_modelUser->login = $data->login;
+					$this->_modelUser->login = htmlspecialchars($data->login);
 					$this->_modelUser->cek = htmlspecialchars($data->cek);
 
 					if(!($this->_modelUser->EmailExists())) {
