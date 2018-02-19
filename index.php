@@ -21,10 +21,6 @@ define('NOVA', dirname(dirname(__FILE__)).'/nova');
 define('DEFAULT_CONTROLLER', 'Home');
 define('DEFAULT_FUNCTION', 'DefaultAction');
 
-// Error controller
-define('ERROR_CONTROLLER', 'Error');
-define('ERROR_FUNCTION', 'Error');
-
 define('DIR_CLASS', ROOT.'/application/controllers/');
 define('DIR_MODEL', ROOT.'/application/models/');
 define('DIR_VIEW',  ROOT.'/application/views/');

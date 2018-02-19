@@ -4,7 +4,7 @@ use \library as h;
 use \library\MVC as l;
 use \application\models as m;
 
-class Validate extends l\Controller {
+class validate extends l\Controller {
     private $uid;
     private $val_key;
 
@@ -32,16 +32,17 @@ class Validate extends l\Controller {
 			}
 
 			if(isset($data->uid) && isset($data->key) && is_numeric($data->uid) && strlen($data->key) >= 128) {
-	            $this->uid = $uid;
-	            $this->val_key = $key;
+	            $this->uid = $data->uid;
+	            $this->val_key = $data->key;
 	            $this->_modelUserVal = new m\UserValidation($this->uid);
 
 	            if($this->_modelUserVal->getKey()) { // Found key
 		            if($this->_modelUserVal->getKey() === $this->val_key) { // Same keys, validate account
+						$this->_modelUserVal->Delete();
+						$this->redis->del('uid:'.$this->uid.':mailnbf:validate');
 						$resp['code'] = 200;
 						$resp['status'] = 'success';
 						$resp['message'] = 'validated';
-		                $this->_modelUserVal->Delete();
 					} else { // Different key, send a new mail ?
 		                $resp['message'] = 'differentKey';
 		            }

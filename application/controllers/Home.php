@@ -1,19 +1,16 @@
 <?php
 namespace application\controllers;
+use \library as h;
 use \library\MVC as l;
 
 class Home extends l\Controller {
 
 	function DefaultAction() {
-		if(!empty($_SESSION['id'])) {
-            if(!empty($_SESSION['validate'])) {
-                header('Location: '.MVC_ROOT.'/Validate');
-            } else {
-				header('Location: '.MVC_ROOT.'/User');
-			}
-		} else {
-			header('Location: '.MVC_ROOT.'/Login');
-		}
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$resp['token'] = $this->_token;
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
 	}
 }
-?>

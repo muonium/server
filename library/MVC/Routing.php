@@ -2,8 +2,14 @@
 namespace library\MVC;
 
 class Routing {
-
 	private static $instance;
+	private $resp = [
+		'code' => 400,
+		'status' => 'error',
+		'data' => [],
+		'message' => null,
+		'token' => null
+	];
 
 	public static function getInstance() {
 		if (!isset(self::$instance)) {
@@ -52,7 +58,10 @@ class Routing {
 
 		if (!file_exists(DIR_CLASS.'/'.$_controller.'.php')) {
             // Error : Controller doesn't exists
-			header('Location: '.MVC_ROOT.'/Error/Error/404');
+			header("Content-type: application/json");
+			$this->resp['code'] = 404;
+			http_response_code($this->resp['code']);
+			exit(json_encode($this->resp));
 		}
 		else {
 			require_once(DIR_CLASS.'/'.$_controller.'.php');
@@ -61,7 +70,10 @@ class Routing {
 
 		if (!class_exists($c)) {
             // Error : Class doesn't exists
-			header('Location: '.MVC_ROOT.'/Error/Error/404');
+			header("Content-type: application/json");
+			$this->resp['code'] = 404;
+			http_response_code($this->resp['code']);
+			exit(json_encode($this->resp));
 		}
 		else {
             // Call the controller
@@ -71,7 +83,10 @@ class Routing {
 			if(!empty($_method)) {
 				if(!method_exists($_class, $_method)) {
                     // Error : Method doesn't exists
-					header('Location: '.MVC_ROOT.'/Error/Error/404');
+					header("Content-type: application/json");
+					$this->resp['code'] = 404;
+					http_response_code($this->resp['code']);
+					exit(json_encode($this->resp));
 				}
 				else {
                     // Are there parameters ?
@@ -81,7 +96,10 @@ class Routing {
 
 						if($r->getNumberOfRequiredParameters() > $nb_params) {
                             // Error : Not enough parameters for calling this method
-							header('Location: '.MVC_ROOT.'/Error/Error/404');
+							header("Content-type: application/json");
+							$this->resp['code'] = 404;
+							http_response_code($this->resp['code']);
+							exit(json_encode($this->resp));
 						}
 						else {
 							call_user_func_array([$_class, $_method], $params);
@@ -91,7 +109,10 @@ class Routing {
 						$r = new \ReflectionMethod($_class, $_method);
 						if($r->getNumberOfRequiredParameters() > 0) {
                             // Error : Not enough parameters for calling this method
-							header('Location: '.MVC_ROOT.'/Error/Error/404');
+							header("Content-type: application/json");
+							$this->resp['code'] = 404;
+							http_response_code($this->resp['code']);
+							exit(json_encode($this->resp));
 						}
 						else {
 							$_class->$_method();

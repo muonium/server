@@ -1,13 +1,12 @@
 <?php
 namespace application\controllers;
+use \library as h;
 use \library\MVC as l;
 use \application\models as m;
 
-class LostPass extends l\Controller {
-
-    private $id_user;
+class lostpass extends l\Controller {
+    private $uid;
     private $val_key;
-    private $err_msg;
 
     private $_modelUser;
     private $_modelUserLostPass;
@@ -16,191 +15,134 @@ class LostPass extends l\Controller {
     private $ppCounter = 0;
 
     function __construct() {
-        parent::__construct([
-            'mustBeLogged' => false,
-            'mustBeValidated' => false
-        ]);
+        parent::__construct();
     }
 
-    function DefaultAction() {
-        if(!empty($_SESSION['changePassId']) && !empty($_SESSION['changePassKey'])) {
-            $this->_modelUser = new m\Users($_SESSION['changePassId']);
-            require_once(DIR_VIEW."LostPassForm.php");
-        }
-        else {
-            require_once(DIR_VIEW."LostPass.php");
+    function keyAction($uid = null, $key = null) {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+
+		if($method !== 'post' && $method !== 'get') {
+			$resp['code'] = 405; // Method Not Allowed
 		}
-    }
+		elseif($this->isLogged() === false) {
+			if($method === 'get' && $uid !== null && $key !== null) {
+				$data->uid = urldecode($uid);
+				$data->key = urldecode($key);
+			}
 
-    function ResetPassAction() {
-        // Called by lostPass.js
-        if(!empty($_SESSION['changePassId']) && !empty($_SESSION['changePassKey'])) {
-            if(is_numeric($_SESSION['changePassId']) && strlen($_SESSION['changePassKey']) == 128) {
-                if(!empty($_POST['pwd']) || !empty($_POST['pp'])) {
-                    $this->_modelUserLostPass = new m\UserLostPass($_SESSION['changePassId']);
+			if(isset($data->uid) && isset($data->key) && is_numeric($data->uid) && strlen($data->key) >= 128) {
+        		$this->uid = $data->uid;
+        		$this->val_key = $data->key;
+        		$this->_modelUserLostPass = new m\UserLostPass($this->uid);
 
-                    if($this->_modelUserLostPass->getKey()) {
-
-                        if($this->_modelUserLostPass->getKey() == $_SESSION['changePassKey'] && $this->_modelUserLostPass->getExpire() >= time()) {
-                            $this->_modelUser = new m\Users($_SESSION['changePassId']);
-
-                            if(!empty($_POST['pwd'])) {
-                                // change password
-                                $this->_modelUser->password = password_hash(urldecode($_POST['pwd']), PASSWORD_BCRYPT);
-
-                                if($this->_modelUser->updatePassword()) {
-                                    unset($_SESSION['changePassId']);
-                                    unset($_SESSION['changePassKey']);
-                                    unset($_SESSION['sendMail']);
-                                    $this->_modelUserLostPass->Delete();
-                                    echo 'ok@'.self::$txt->LostPass->updateOk;
-                                }
-                                else {
-                                    echo self::$txt->LostPass->updateErr;
-								}
-                            }
-                            /*if(!empty($_POST['pp'])) {
-                                // change passphrase
-
-                                $this->_modelUser->passphrase = urldecode($_POST['pp']);
-                                //$this->_modelUser->passphrase = password_hash(urldecode($_POST['pp']), PASSWORD_BCRYPT);
-
-                                if($this->_modelUser->updatePassphrase()) {
-                                    if($this->ppCounter >= 2) {
-                                        // To do :
-                                        // Delete all user's data
-                                    }
-                                    $this->_modelUser->incrementPpCounter();
-                                    unset($_SESSION['changePassId']);
-                                    unset($_SESSION['changePassKey']);
-                                    unset($_SESSION['sendMail']);
-                                    $this->_modelUserLostPass->Delete();
-                                    echo 'ok@'.self::$txt->LostPass->updateOk;
-                                }
-                                else {
-                                    echo self::$txt->LostPass->updateErr;
-								}
-                            }*/
-                        }
-                        else {
-                            unset($_SESSION['changePassId']);
-                            unset($_SESSION['changePassKey']);
-                            unset($_SESSION['sendMail']);
-                            echo self::$txt->LostPass->errmessage;
-                        }
-                    }
-                    else {
-                        unset($_SESSION['changePassId']);
-                        unset($_SESSION['changePassKey']);
-                        unset($_SESSION['sendMail']);
-                        echo self::$txt->LostPass->errmessage;
-                    }
-                }
-                else {
-                    echo self::$txt->Register->form;
-                }
-            }
-            else {
-                echo self::$txt->Error->{'default'};
-            }
-        }
-        else {
-            echo self::$txt->Error->{'default'};
-        }
-    }
-
-    function KeyAction($id_user, $key) {
-        if(!is_numeric($id_user) || strlen($key) < 128) exit(header('Location: '.MVC_ROOT.'/Error/Error/404'));
-
-        $this->id_user = $id_user;
-        $this->val_key = $key;
-
-        $this->_modelUserLostPass = new m\UserLostPass($this->id_user);
-
-        if(!($this->_modelUserLostPass->getKey())) { // Unable to find key
-            exit(header('Location: '.MVC_ROOT.'/Error/Error/404'));
-		}
-
-        if($this->_modelUserLostPass->getKey() != $this->val_key || $this->_modelUserLostPass->getExpire() < time()) {
-            // Different key, send a new mail ?
-            $this->err_msg = self::$txt->LostPass->errmessage;
-            require_once(DIR_VIEW."LostPass.php");
-        }
-        else {
-            // Same keys, redirect and show form to change password or passphrase
-            $_SESSION['changePassId'] = $id_user;
-            $_SESSION['changePassKey'] = $key;
-            header('Location: '.MVC_ROOT.'/LostPass');
-        }
-    }
-
-    function SendMailAction() {
-        // Send AGAIN lost pass mail with validation key
-        sleep(1);
-
-        if(!isset($_POST['user'])) {
-            require_once(DIR_VIEW."LostPass.php");
-		}
-        else {
-            $user = $_POST['user'];
-
-            // One mail per minute
-            $w = 0;
-            $new = 0;
-
-            if(!empty($_SESSION['sendMail'])) {
-                if($_SESSION['sendMail']+60 > time()) {
-                    $w = 1;
-                    $this->err_msg = self::$txt->Validate->wait;
-                    require_once(DIR_VIEW."LostPass.php");
-                }
-            }
-
-            if($w == 0) {
-                // Allowed to send a new mail
-                $this->_modelUser = new m\Users();
-
-                if(strpos($user, '@')) {
-                    $this->_modelUser->email = $user;
-                } else {
-                    $this->_modelUser->login = $user;
+		        if($key = $this->_modelUserLostPass->getKey()) { // Found key
+			        if($key === $this->val_key && $this->_modelUserLostPass->getExpire() >= time()) {
+						// Same keys, redirect and show form to change password or passphrase
+						$resp['code'] = 200;
+						$resp['status'] = 'success';
+						$resp['message'] = 'ok';
+			        } else { // Different key, send a new mail ?
+			            $resp['message'] = 'differentKey';
+			        }
 				}
+			} else {
+				$resp['message'] = 'emptyField';
+			}
+		}
 
-				$user_mail = $this->_modelUser->getEmail();
-                if($user_mail === false) exit(header('Location: '.MVC_ROOT.'/Error/Error/404'));
-
-				$id_user = $this->_modelUser->getId();
-                if($id_user === false) exit(header('Location: '.MVC_ROOT.'/Error/Error/404'));
-
-                $this->_modelUserLostPass = new m\UserLostPass($id_user);
-                if(!($this->_modelUserLostPass->getKey())) $new = 1;
-
-                $key = hash('sha512', uniqid(rand(), true));
-
-                $this->_modelUserLostPass->val_key = $key;
-                $this->_modelUserLostPass->expire = time()+3600;
-
-                if($new == 0) {
-                    $this->_modelUserLostPass->Update();
-                } else {
-                    $this->_modelUserLostPass->Insertion();
-				}
-
-                $this->_mail = new l\Mail();
-                $this->_mail->_to = $user_mail;
-                $this->_mail->_subject = self::$txt->LostPass->subject;
-                $this->_mail->_message = str_replace(
-                    ["[id_user]", "[key]", "[url_app]"],
-                    [$id_user, $key, URL_APP],
-                    self::$txt->LostPass->message
-                );
-                $this->_mail->send();
-                $_SESSION['sendMail'] = time();
-
-                $this->err_msg = self::$txt->Global->mail_sent;
-                require_once(DIR_VIEW."LostPass.php");
-            }
-        }
+		http_response_code($resp['code']);
+		echo json_encode($resp);
     }
-};
-?>
+
+    function mailAction() {
+    	// Send lost pass mail with validation key
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif($this->isLogged() === false) {
+        	sleep(2);
+			if(isset($data->uid) && is_numeric($data->uid)) {
+            	$this->uid = $uid;
+                $this->_modelUser = new m\Users($this->uid);
+				if($user_mail = $this->_modelUser->getEmail()) {
+					$resp['code'] = 200;
+					$resp['status'] = 'success';
+
+					$key = hash('sha512', uniqid(rand(), true));
+
+                	$this->_modelUserLostPass = new m\UserLostPass($this->uid);
+                	$new = $this->_modelUserLostPass->getKey() ? false : true;
+                	$this->_modelUserLostPass->val_key = $key;
+                	$this->_modelUserLostPass->expire = time()+3600;
+
+                	if($new) {
+						$this->_modelUserLostPass->Insertion();
+                	} else {
+						$this->_modelUserLostPass->Update();
+					}
+
+                	$this->_mail = new l\Mail();
+					$this->_mail->delay(60, $this->uid, $this->getRedis(), 'lostpass');
+                	$this->_mail->_to = $user_mail;
+                	$this->_mail->_subject = self::$txt->LostPass->subject;
+	                $this->_mail->_message = str_replace(
+	                    ["[id_user]", "[key]", "[url_app]"],
+	                    [$uid, $key, URL_APP],
+	                    self::$txt->LostPass->message
+	                );
+
+					$resp['message'] = $this->_mail->send(); // 'sent' or 'wait'
+				}
+            } else {
+				$resp['message'] = 'emptyField';
+			}
+        }
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+    }
+
+	function DefaultAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif($this->isLogged() === false) {
+			if(isset($data->uid) && isset($data->key) && is_numeric($data->uid) && strlen($data->key) >= 128 && isset($data->password)) {
+				$this->_modelUserLostPass = new m\UserLostPass($data->uid);
+				if($key = $this->_modelUserLostPass->getKey()) {
+					if($key === $data->key && $this->_modelUserLostPass->getExpire() >= time()) {
+						$this->_modelUser = new m\Users($data->uid);
+						$this->_modelUser->password = password_hash(urldecode($data->password), PASSWORD_BCRYPT);
+						if($this->_modelUser->updatePassword()) {
+							$this->_modelUserLostPass->Delete();
+							$this->redis->del('uid:'.$this->uid.':mailnbf:lostpass');
+							$resp['code'] = 200;
+							$resp['status'] = 'success';
+							$resp['message'] = 'updated';
+						}
+					} else {
+			            $resp['message'] = 'differentKey';
+			        }
+				}
+			} else {
+				$resp['message'] = 'emptyField';
+			}
+		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+	}
+}

@@ -64,11 +64,16 @@ class Controller {
     }
 
 	public static function loadLanguage($lang) {
+		$resp = self::RESP;
 		if(file_exists(DIR_LANGUAGE.$lang.".json")) {
 			$_json = file_get_contents(DIR_LANGUAGE.$lang.".json");
 			self::$userLanguage = $lang;
 		} elseif($lang === DEFAULT_LANGUAGE) {
-			exit('Unable to load DEFAULT_LANGUAGE JSON !');
+			header("Content-type: application/json");
+			$resp['code'] = 400;
+			$resp['message'] = 'Unable to load DEFAULT_LANGUAGE JSON !';
+			http_response_code($resp['code']);
+			exit(json_encode($resp));
 		} else {
 			self::loadLanguage(DEFAULT_LANGUAGE);
 		}
@@ -76,7 +81,11 @@ class Controller {
 		self::$txt = json_decode($_json);
 		if(json_last_error() !== 0) {
 			if($lang === DEFAULT_LANGUAGE) {
-				exit('Error in the DEFAULT_LANGUAGE JSON !');
+				header("Content-type: application/json");
+				$resp['code'] = 400;
+				$resp['message'] = 'Error in the DEFAULT_LANGUAGE JSON !';
+				http_response_code($resp['code']);
+				exit(json_encode($resp));
 			}
 			self::loadLanguage(DEFAULT_LANGUAGE);
 		}
