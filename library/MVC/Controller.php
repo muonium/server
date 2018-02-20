@@ -163,9 +163,11 @@ class Controller {
 				$this->redis->del('uid:'.$userId);
 			}
 		}
-		$this->redis->del('token:'.$jti.':uid');
-		$this->redis->del('token:'.$jti.':iat');
-		return $this->redis->del('token:'.$jti);
+		$keys = $this->redis->keys('token:'.$jti.'*');
+		foreach($keys as $key) {
+			$this->redis->del($key);
+		}
+		return true;
 	}
 
 	public function removeTokens($userId) {
@@ -173,9 +175,10 @@ class Controller {
 			$uidTokens = substr($uidTokens, -1) === ';' ? substr($uidTokens, 0, -1) : $uidTokens;
 			$uidTokens = explode(';', $uidTokens);
 			foreach($uidTokens as $jti) {
-				$this->redis->del('token:'.$jti.':uid');
-				$this->redis->del('token:'.$jti.':iat');
-				$this->redis->del('token:'.$jti);
+				$keys = $this->redis->keys('token:'.$jti.'*');
+				foreach($keys as $key) {
+					$this->redis->del($key);
+				}
 			}
 		}
 		return $this->redis->del('uid:'.$userId);

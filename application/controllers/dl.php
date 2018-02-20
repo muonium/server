@@ -9,9 +9,11 @@ class dl extends l\Controller {
 	private $_modelFolders;
 	private $sharerID = null;
 	private $filename = null;
+	private $redis = null;
 
     function __construct() {
         parent::__construct();
+		$this->redis = $this->getRedis();
     }
 
     public function chunkAction() {
@@ -30,7 +32,7 @@ class dl extends l\Controller {
 			$filename = $this->parseFilename($data->filename);
 			if($filename !== false) {
 				$this->filename = $filename;
-				$path = $this->getUploadFolderPath($data->folder_id);
+				$path = $this->getUploadFolderPath(intval($data->folder_id));
 				if($path !== false) {
 					$resp['code'] = 200;
 					$resp['status'] = 'success';
@@ -69,7 +71,7 @@ class dl extends l\Controller {
 		    $filename = $this->parseFilename($data->filename);
 			if($filename !== false) {
 				$this->filename = $filename;
-				$path = $this->getUploadFolderPath($data->folder_id);
+				$path = $this->getUploadFolderPath(intval($data->folder_id));
 				if($path !== false) {
 					$filepath = NOVA.'/'.$sharerID.'/'.$path.$filename;
 				    if(file_exists($filepath)) {
@@ -142,12 +144,12 @@ class dl extends l\Controller {
 		// Check if the file is shared
 		$this->_modelFiles = new m\Files($this->sharerID);
 		if(!($this->_modelFiles->isShared($this->filename, $folder_id))) return false;
+		if($folder_id === 0) return '';
 
-		// Get the full path of an uploaded file until its folder using SESSION
-		if(isset($_SESSION['upload'][$folder_id]['path'])) {
-			return $_SESSION['upload'][$folder_id]['path'];
+		// Get the full path of an uploaded file until its folder using Redis
+		if($path = $this->redis->get('shared:'.$folder_id)) {
+			return $path;
 		}
-
 		$this->_modelFolders = new m\Folders($this->sharerID);
 
 		$path = $this->_modelFolders->getFullPath($folder_id);
@@ -156,7 +158,7 @@ class dl extends l\Controller {
 		}
 
 		if($path != '') $path .= '/';
-		$_SESSION['upload'][$folder_id]['path'] = $path;
+		$this->redis->set('shared:'.$folder_id, $path);
 		return $path;
 	}
 }
