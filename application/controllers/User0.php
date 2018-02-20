@@ -483,28 +483,6 @@ class User extends l\Controller {
         }
     }
 
-    function MvTrashAction() {
-        $this->_modelFiles = new m\Files($_SESSION['id']);
-        $this->_modelFolders = new m\Folders($_SESSION['id']);
-
-        $trash = 1;
-        if(isset($_POST['trash']) && $_POST['trash'] == 0) $trash = 0;
-
-        if(!empty($_POST['files'])) {
-            $files = explode("|", $_POST['files']);
-            foreach($files as $file) {
-                if(is_numeric($file)) $this->_modelFiles->updateTrash($file, $trash);
-            }
-        }
-
-        if(!empty($_POST['folders'])) {
-            $folders = explode("|", $_POST['folders']);
-            foreach($folders as $folder) {
-                if(is_numeric($folder)) $this->_modelFolders->updateTrash($folder, $trash);
-            }
-        }
-    }
-
     function rmFile($id, $path, $folder_id) {
 		// $folder_id is used only to delete session var
         if(is_numeric($id)) {
