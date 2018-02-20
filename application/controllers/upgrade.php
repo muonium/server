@@ -100,7 +100,7 @@ class upgrade extends l\Controller {
 		echo json_encode($resp);
 	}
 
-	function duration($duration) {
+	private function duration($duration) {
 		if($duration < 0) return self::$txt->Upgrade->lifetime;
 		if($duration === 12) return $duration.' '.self::$txt->Upgrade->year;
 		if($duration % 12 === 0) return ($duration/12).' '.self::$txt->Upgrade->years;

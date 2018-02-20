@@ -18,7 +18,7 @@ class lostpass extends l\Controller {
         parent::__construct();
     }
 
-    function keyAction($uid = null, $key = null) {
+    public function keyAction($uid = null, $key = null) {
 		header("Content-type: application/json");
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
@@ -57,7 +57,7 @@ class lostpass extends l\Controller {
 		echo json_encode($resp);
     }
 
-    function mailAction() {
+    public function mailAction() {
     	// Send lost pass mail with validation key
 		header("Content-type: application/json");
 		$resp = self::RESP;
@@ -110,7 +110,7 @@ class lostpass extends l\Controller {
 		echo json_encode($resp);
     }
 
-	function DefaultAction() {
+	public function DefaultAction() {
 		header("Content-type: application/json");
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();

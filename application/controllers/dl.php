@@ -1,100 +1,135 @@
 <?php
 namespace application\controllers;
+use \library as h;
 use \library\MVC as l;
 use \application\models as m;
 
 class dl extends l\Controller {
-
     private $_modelFiles;
 	private $_modelFolders;
 	private $sharerID = null;
 	private $filename = null;
 
     function __construct() {
-        parent::__construct([
-            'mustBeLogged' => false,
-            'mustBeValidated' => false
-        ]);
+        parent::__construct();
     }
 
-    function DefaultAction() {
-		if(is_array($_GET) && count($_GET) > 0) {
-			$b = getFileId(key($_GET));
-			if(is_numeric($b)) {
-				$this->_modelFiles = new m\Files();
-				$infos = $this->_modelFiles->getInfos($b);
-				if($infos !== false) {
-					$filesize = showSize($infos['size']);
-                    $folderID = $this->_modelFiles->getFolderFromId($b);
-					require_once(DIR_VIEW.'Dl.php');
-					exit;
-				}
-			}
+    public function chunkAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$this->isLogged(); // It doesn't matter if user is logged or not for now but it sets the (new) token if it exists
+		$resp['token'] = $this->_token;
+
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
 		}
-		header('Location: User');
-    }
-
-    function getChunkAction($sharerID) {
-		if(!is_numeric($sharerID)) exit('error');
-		$this->sharerID = $sharerID;
-		if(isset($_POST['filename']) && isset($_POST['line']) && isset($_POST['folder_id'])) {
-			// Get a chunk with Ajax
-		    $line = $_POST['line'];
-		    $filename = $this->parseFilename($_POST['filename']);
-			$folder_id = $_POST['folder_id'];
-
-			if($filename !== false && is_numeric($folder_id)) {
+		elseif(isset($data->uid) && is_numeric($data->uid) && isset($data->filename) && isset($data->folder_id) && is_numeric($data->folder_id) && isset($data->line) && is_numeric($data->line)) {
+			$this->sharerID = $data->uid;
+			$filename = $this->parseFilename($data->filename);
+			if($filename !== false) {
 				$this->filename = $filename;
-				$path = $this->getUploadFolderPath($folder_id);
-				if($path === false) {
-					echo 'error'; exit;
+				$path = $this->getUploadFolderPath($data->folder_id);
+				if($path !== false) {
+					$resp['code'] = 200;
+					$resp['status'] = 'success';
+					$filepath = NOVA.'/'.$this->sharerID.'/'.$path.$filename;
+					$file = new \SplFileObject($filepath, 'r');
+				    $file->seek($data->line);
+				    $resp['data'] = str_replace("\r\n", "", $file->current());
+				} else {
+					$resp['message'] = 'notExists';
 				}
-
-				$filepath = NOVA.'/'.$sharerID.'/'.$path.$filename;
-				$file = new \SplFileObject($filepath, 'r');
-			    $file->seek($line);
-
-			    echo str_replace("\r\n", "", $file->current());
+			} else {
+				$resp['message'] = 'notExists';
 			}
+		} else {
+			$resp['message'] = 'emptyField';
 		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
 	}
 
-	function getNbChunksAction($sharerID) {
-		if(!is_numeric($sharerID)) exit('0');
-		$this->sharerID = $sharerID;
-		if(isset($_POST['filename']) && isset($_POST['folder_id'])) {
-		    // Get number of chunks with Ajax
-		    $filename = $this->parseFilename($_POST['filename']);
-			$folder_id = $_POST['folder_id'];
+	public function nbChunksAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$this->isLogged(); // It doesn't matter if user is logged or not for now but it sets the (new) token if it exists
+		$resp['token'] = $this->_token;
 
-			if($filename !== false && is_numeric($folder_id)) {
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif(isset($data->uid) && is_numeric($data->uid) && isset($data->filename) && isset($data->folder_id) && is_numeric($data->folder_id)) {
+			$resp['data'] = 0;
+			$this->sharerID = $data->uid;
+		    $filename = $this->parseFilename($data->filename);
+			if($filename !== false) {
 				$this->filename = $filename;
-				$path = $this->getUploadFolderPath($folder_id);
-				if($path === false) {
-					echo '0'; exit;
-				}
-
-				$filepath = NOVA.'/'.$sharerID.'/'.$path.$filename;
-			    if(file_exists($filepath)) {
-			        $file = new \SplFileObject($filepath, 'r');
-			        $file->seek(PHP_INT_MAX);
-
-					if($file->current() === "EOF") { // A line with "EOF" at the end of the file when the file is complete
-						echo $file->key()-1;
+				$path = $this->getUploadFolderPath($data->folder_id);
+				if($path !== false) {
+					$filepath = NOVA.'/'.$sharerID.'/'.$path.$filename;
+				    if(file_exists($filepath)) {
+						$resp['code'] = 200;
+						$resp['status'] = 'success';
+				        $file = new \SplFileObject($filepath, 'r');
+				        $file->seek(PHP_INT_MAX);
+						if($file->current() === "EOF") { // A line with "EOF" at the end of the file when the file is complete
+							$resp['data'] = $file->key()-1;
+						} else {
+							$resp['data'] = $file->key();
+						}
 					} else {
-						echo $file->key();
+						$resp['message'] = 'notExists';
 					}
 				} else {
-					echo '0';
+					$resp['message'] = 'notExists';
 				}
+			} else {
+				$resp['message'] = 'notExists';
 			}
-			else {
-				echo '0';
-			}
+		} else {
+			$resp['message'] = 'emptyField';
 		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
 	}
 
-	function parseFilename($f) {
+	public function DefaultAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues('array'); // We need an array in this case
+		$this->isLogged(); // It doesn't matter if user is logged or not for now but it sets the (new) token if it exists
+		$resp['token'] = $this->_token;
+
+		if($method !== 'get') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif(is_array($data) && count($data) > 0) {
+			$fid = getFileId(key($data));
+			if(is_numeric($fid)) {
+				$this->_modelFiles = new m\Files();
+				$infos = $this->_modelFiles->getInfos($fid);
+				if($infos !== false) {
+					$resp['code'] = 200;
+					$resp['status'] = 'success';
+					$resp['data'] = $infos;
+				} else {
+					$resp['message'] = 'notShared';
+				}
+			}
+		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+	}
+
+	private function parseFilename($f) {
 		$f = str_replace(['|', '/', '\\', ':', '*', '?', '<', '>', '"'], "", $f); // not allowed chars
 		if(strlen($f) > 128) { // max length 128 chars
 			$f = substr($f, 0, 128);
@@ -102,7 +137,7 @@ class dl extends l\Controller {
 		return $f;
 	}
 
-	function getUploadFolderPath($folder_id) {
+	private function getUploadFolderPath($folder_id) {
 		if($this->sharerID === null || !is_numeric($this->sharerID) || $this->filename === null) return false;
 		// Check if the file is shared
 		$this->_modelFiles = new m\Files($this->sharerID);
@@ -124,5 +159,4 @@ class dl extends l\Controller {
 		$_SESSION['upload'][$folder_id]['path'] = $path;
 		return $path;
 	}
-};
-?>
+}

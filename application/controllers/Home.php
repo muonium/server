@@ -4,8 +4,7 @@ use \library as h;
 use \library\MVC as l;
 
 class Home extends l\Controller {
-
-	function DefaultAction() {
+	public function DefaultAction() {
 		header("Content-type: application/json");
 		$resp = self::RESP;
 		$resp['token'] = $this->_token;

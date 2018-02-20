@@ -5,13 +5,11 @@ use \library\MVC as l;
 use \application\models as m;
 
 class bug extends l\Controller {
-
     private $_modelUser;
     private $_mail;
     private $_message;
 
     // Different possible values for select tag
-
     private $values = [
         "os" => [
             "Linux" => "GnuLinux/Unix/BSD",
@@ -32,33 +30,13 @@ class bug extends l\Controller {
         ]
     ];
 
-    ///////////////////
-
     function __construct() {
         parent::__construct([
             'mustBeLogged' => true
         ]);
     }
 
-    /*function printValues($key) {
-        // Print values from values array for the selected key
-        if(array_key_exists($key, $this->values)) {
-            foreach($this->values[$key] as $key => $value) {
-                if($key == 'other') $value = self::$txt->Bug->other;
-                echo '\n<option value="'.htmlentities($key).'">'.htmlentities($value).'</option>';
-            }
-        }
-    }*/
-
-    function checkValue($value, $key) {
-        // Check if the entered value is in the array
-        if(array_key_exists($value, $this->values[$key])) {
-            return htmlentities($this->values[$key][$value]);
-		}
-        return false;
-    }
-
-    function DefaultAction() {
+    public function DefaultAction() {
 		header("Content-type: application/json");
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
@@ -112,5 +90,22 @@ class bug extends l\Controller {
 		http_response_code($resp['code']);
 		echo json_encode($resp);
     }
-};
-?>
+
+	/*private function printValues($key) {
+		// Print values from values array for the selected key
+		if(array_key_exists($key, $this->values)) {
+			foreach($this->values[$key] as $key => $value) {
+				if($key == 'other') $value = self::$txt->Bug->other;
+				echo '\n<option value="'.htmlentities($key).'">'.htmlentities($value).'</option>';
+			}
+		}
+	}*/
+
+	private function checkValue($value, $key) {
+		// Check if the entered value is in the array
+		if(array_key_exists($value, $this->values[$key])) {
+			return htmlentities($this->values[$key][$value]);
+		}
+		return false;
+	}
+}

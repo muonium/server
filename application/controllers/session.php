@@ -11,7 +11,7 @@ class session extends l\Controller {
         parent::__construct();
     }
 
-    function authcodeAction() {
+    public function authcodeAction() {
         // User sent an auth code
         sleep(1);
 
@@ -211,7 +211,7 @@ class session extends l\Controller {
 		echo json_encode($resp);
     }
 
-    function generateCode() {
+    private function generateCode() {
         $code = '';
         $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
         for($i = 0; $i < 8; $i++) {
