@@ -47,8 +47,8 @@ class mv extends c\FileManager {
 		        $quota = $this->_modelStorage->getUserQuota();
 		        $stored = $this->_modelStorage->getSizeStored();
 				if($quota !== false && $stored !== false) {
-					$_SESSION['size_stored'] = $stored;
-					$_SESSION['user_quota'] = $quota;
+					$this->redis->set('token:'.$this->_token.':size_stored', $stored);
+					$this->redis->set('token:'.$this->_token.':user_quota', $quota);
 			        $uploaded = 0;
 
 			        if(is_dir(NOVA.'/'.$this->_uid.'/'.$this->_path) && is_dir(NOVA.'/'.$this->_uid.'/'.$old_path)) {
@@ -214,7 +214,7 @@ class mv extends c\FileManager {
 			            } // end folders
 
 			            if($this->_modelStorage->updateSizeStored($stored)) {
-							$_SESSION['size_stored'] = $stored;
+							$this->redis->set('token:'.$this->_token.':size_stored', $stored);
 						}
 			            if($uploaded !== 0) {
 							$this->_modelFolders->updateFoldersSize($this->_folderId, $uploaded);
