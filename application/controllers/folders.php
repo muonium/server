@@ -11,6 +11,118 @@ class folders extends c\FileManager {
         parent::__construct();
     }
 
+	public function addAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$resp['token'] = $this->_token;
+
+        if(isset($data->name)) {
+			$this->getFolderVars();
+            $folder = $this->parseFilename(urldecode($data->name));
+            if(strlen($folder) > 64) { // max length 64 chars
+                $folder = substr($folder, 0, 64);
+			}
+
+            if(is_dir(NOVA.'/'.$this->_uid.'/'.$this->_path) && !is_dir(NOVA.'/'.$this->_uid.'/'.$this->_path.$folder)) {
+                $this->_modelFolders->name = $folder;
+                $this->_modelFolders->parent = $this->_folderId;
+                $this->_modelFolders->path = $this->_path;
+                if($this->_modelFolders->addFolder()) {
+					$resp['code'] = 201;
+					$resp['status'] = 'success';
+                	mkdir(NOVA.'/'.$this->_uid.'/'.$this->_path.$folder, 0770);
+					$resp['data'] = $this->_modelFolders->getLastInsertedId();
+                }
+            } else {
+				$resp['message'] = 'exists';
+			}
+        } else {
+			$resp['message'] = 'emptyField';
+		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+    }
+
+	public function ChangePathAction() {
+        if(!isset($_POST['folder_id'])) {
+            $folder_id = 0;
+        } elseif(!is_numeric($_POST['folder_id'])) {
+            return false;
+        } else {
+            $folder_id = urldecode($_POST['folder_id']);
+		}
+
+        $this->trash = empty($_POST['trash']) ? 0 : 1;
+
+        if($folder_id == 0) {
+            // root
+            $this->_path = '';
+            $this->_folderId = 0;
+            $this->getTree();
+        }
+        else {
+            $this->_modelFolders = new m\Folders($_SESSION['id']);
+
+            $path = $this->_modelFolders->getPath($folder_id);
+            if($path === false) return false;
+            $path .= $this->_modelFolders->getFoldername($folder_id);
+
+            if(is_dir(NOVA.'/'.$_SESSION['id'].'/'.$path)) {
+                $this->_path = $path;
+                $this->_folderId = $folder_id;
+                $this->getTree();
+            }
+        }
+    }
+
+	public function RenameAction() {
+        $this->_modelFiles = new m\Files($_SESSION['id']);
+        $this->_modelFolders = new m\Folders($_SESSION['id']);
+
+        if(isset($_POST['old']) && isset($_POST['new']) && isset($_POST['folder_id'])) {
+            $folder_id = urldecode($_POST['folder_id']);
+            if(!is_numeric($folder_id)) return false;
+            $old = urldecode($_POST['old']);
+            $new = urldecode($_POST['new']);
+            $new = $this->parseFilename($new);
+
+            if($old != $new && !empty($old) && !empty($new)) {
+                $path = $this->_modelFolders->getFullPath($folder_id);
+                if($path != '') $path .= '/';
+
+                if(is_dir(NOVA.'/'.$_SESSION['id'].'/'.$path.$old) && !is_dir(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) {
+                    if(strlen($new) > 64) { // max folder length 64 chars
+                        $new = substr($new, 0, 64);
+						if(is_dir(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) return false;
+					}
+                    // Rename folder in db
+                    $this->_modelFolders->rename($path, $old, $new);
+                }
+                elseif(file_exists(NOVA.'/'.$_SESSION['id'].'/'.$path.$old) && !file_exists(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) {
+                    if(strlen($new) > 128) { // max file length 128 chars
+                        $new = substr($new, 0, 128);
+						if(file_exists(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) return false;
+					}
+
+                    // Rename file in db
+					if(isset($_SESSION['upload'][$folder_id]['files'][$old])) {
+						unset($_SESSION['upload'][$folder_id]['files'][$old]);
+					}
+                    $this->_modelFiles->rename($folder_id, $old, $new);
+                }
+                else {
+                    return false;
+                }
+
+                rename(NOVA.'/'.$_SESSION['id'].'/'.$path.$old, NOVA.'/'.$_SESSION['id'].'/'.$path.$new);
+				echo 'ok';
+            }
+        }
+    }
+
 	public function DefaultAction() {
 		header("Content-type: application/json");
 		$resp = self::RESP;
@@ -18,28 +130,6 @@ class folders extends c\FileManager {
 		$data = h\httpMethodsData::getValues();
 		$resp['token'] = $this->_token;
 	}
-
-	public function AddFolderAction() {
-        $this->getFolderVars();
-        if(!empty($_POST['folder'])) {
-            $folder = urldecode($_POST['folder']);
-            $folder = $this->parseFilename($folder);
-            if(strlen($folder) > 64) { // max length 64 chars
-                $folder = substr($folder, 0, 64);
-			}
-
-            if(is_dir(NOVA.'/'.$_SESSION['id'].'/'.$this->_path) && !is_dir(NOVA.'/'.$_SESSION['id'].'/'.$this->_path.$folder)) {
-                $this->_modelFolders->name = $folder;
-                $this->_modelFolders->parent = $this->_folderId;
-                $this->_modelFolders->path = $this->_path;
-                $this->_modelFolders->addFolder();
-                echo $this->_modelFolders->getLastInsertedId();
-                mkdir(NOVA.'/'.$_SESSION['id'].'/'.$this->_path.$folder, 0770);
-                return;
-            }
-        }
-        echo 'error';
-    }
 
 	private function getTree() {
         $i = 0;
@@ -157,82 +247,5 @@ class folders extends c\FileManager {
         }
 
         echo '</table>';
-    }
-
-    public function ChangePathAction() {
-        if(!isset($_POST['folder_id'])) {
-            $folder_id = 0;
-        } elseif(!is_numeric($_POST['folder_id'])) {
-            return false;
-        } else {
-            $folder_id = urldecode($_POST['folder_id']);
-		}
-
-        $this->trash = empty($_POST['trash']) ? 0 : 1;
-
-        if($folder_id == 0) {
-            // root
-            $this->_path = '';
-            $this->_folderId = 0;
-            $this->getTree();
-        }
-        else {
-            $this->_modelFolders = new m\Folders($_SESSION['id']);
-
-            $path = $this->_modelFolders->getPath($folder_id);
-            if($path === false) return false;
-            $path .= $this->_modelFolders->getFoldername($folder_id);
-
-            if(is_dir(NOVA.'/'.$_SESSION['id'].'/'.$path)) {
-                $this->_path = $path;
-                $this->_folderId = $folder_id;
-                $this->getTree();
-            }
-        }
-    }
-
-	public function RenameAction() {
-        $this->_modelFiles = new m\Files($_SESSION['id']);
-        $this->_modelFolders = new m\Folders($_SESSION['id']);
-
-        if(isset($_POST['old']) && isset($_POST['new']) && isset($_POST['folder_id'])) {
-            $folder_id = urldecode($_POST['folder_id']);
-            if(!is_numeric($folder_id)) return false;
-            $old = urldecode($_POST['old']);
-            $new = urldecode($_POST['new']);
-            $new = $this->parseFilename($new);
-
-            if($old != $new && !empty($old) && !empty($new)) {
-                $path = $this->_modelFolders->getFullPath($folder_id);
-                if($path != '') $path .= '/';
-
-                if(is_dir(NOVA.'/'.$_SESSION['id'].'/'.$path.$old) && !is_dir(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) {
-                    if(strlen($new) > 64) { // max folder length 64 chars
-                        $new = substr($new, 0, 64);
-						if(is_dir(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) return false;
-					}
-                    // Rename folder in db
-                    $this->_modelFolders->rename($path, $old, $new);
-                }
-                elseif(file_exists(NOVA.'/'.$_SESSION['id'].'/'.$path.$old) && !file_exists(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) {
-                    if(strlen($new) > 128) { // max file length 128 chars
-                        $new = substr($new, 0, 128);
-						if(file_exists(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) return false;
-					}
-
-                    // Rename file in db
-					if(isset($_SESSION['upload'][$folder_id]['files'][$old])) {
-						unset($_SESSION['upload'][$folder_id]['files'][$old]);
-					}
-                    $this->_modelFiles->rename($folder_id, $old, $new);
-                }
-                else {
-                    return false;
-                }
-
-                rename(NOVA.'/'.$_SESSION['id'].'/'.$path.$old, NOVA.'/'.$_SESSION['id'].'/'.$path.$new);
-				echo 'ok';
-            }
-        }
     }
 }
