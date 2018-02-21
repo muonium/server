@@ -12,7 +12,7 @@ class FileManager extends l\Controller {
 	public $_folderId = 0; 		// current folder id (0 = root)
 	public $_trash = 0; 		// 0 : view contents not in the trash || 1 : view contents in the trash
 
-	private $redis = null;
+	protected $redis = null;
 
 	function __construct() {
 		parent::__construct([
@@ -30,7 +30,7 @@ class FileManager extends l\Controller {
 		echo json_encode($resp);
 	}
 
-	public function getFolderVars() {
+	protected function getFolderVars() {
 		// User sent folder_id, initialize model folders, check if folder exists and set folder_id and path in class attributes
 		$data = h\httpMethodsData::getValues();
 		$this->_modelFolders = new m\Folders($this->_uid);
@@ -50,7 +50,7 @@ class FileManager extends l\Controller {
 		return true;
 	}
 
-	public function getUploadFolderPath($folder_id) {
+	protected function getUploadFolderPath($folder_id) {
 		// Get the full path of an uploaded file until its folder using Redis
 		if($folder_id === 0) return '';
 		if($path = $this->redis->get('token:'.$this->_token.':folder:'.$folder_id)) {
@@ -68,7 +68,7 @@ class FileManager extends l\Controller {
 		return $path;
 	}
 
-	public function parseFilename($f) {
+	protected function parseFilename($f) {
 		$f = str_replace(['|', '/', '\\', ':', '*', '?', '<', '>', '"'], "", $f); // not allowed chars
 		if(strlen($f) > 128) { // max length 128 chars
 			$f = substr($f, 0, 128);
@@ -76,7 +76,7 @@ class FileManager extends l\Controller {
 		return $f;
 	}
 
-	public function addSuffixe($file, $suffixe, $max = 128) {
+	protected function addSuffixe($file, $suffixe, $max = 128) {
         $double_extensions = ['tar.gz', 'tar.bz', 'tar.xz', 'tar.bz2'];
 
         $pos = strpos($file, '.');

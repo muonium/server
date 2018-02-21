@@ -11,212 +11,327 @@ class files extends c\FileManager {
         parent::__construct();
     }
 
-	public function DefaultAction() {
+	public function writeAction() {
 		header("Content-type: application/json");
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
 		$data = h\httpMethodsData::getValues();
 		$resp['token'] = $this->_token;
-	}
 
-	public function writeChunkAction() {
-		// SESSION upload contains path for a folder id and its files uploaded during this session but only which doesn't exist or not complete
-
-		function write($fpath, $data) {
+		// Redis :folder contains path for a folder id and its files uploaded during this session but only which doesn't exist or not complete
+		function write($fpath, $data, $resp, $redis) {
 			$data_length = strlen($data);
-			if($_SESSION['size_stored']+$data_length > $_SESSION['user_quota']) {
-				echo 'error';
-			} else {
-				$f = @fopen($fpath, "a");
-				if($f === false || fwrite($f, $data) === false) {
-					echo 'error';
-				} else {
-					$storage = new m\Storage($_SESSION['id']);
-					if($storage->incrementSizeStored($data_length)) {
-						$_SESSION['size_stored'] += $data_length;
-					}
-					echo 'ok';
-				}
-				fclose($f);
+			$user_quota = $redis->get('token:'.$this->_token.':user_quota');
+			$size_stored = $redis->get('token:'.$this->_token.':size_stored');
+			if($user_quota === null || $size_stored === null || $size_stored+$data_length > $user_quota) {
+				return $resp;
 			}
+			$f = @fopen($fpath, 'a');
+			if($f === false || fwrite($f, $data) === false) {
+				return $resp;
+			}
+			$storage = new m\Storage($this->_uid);
+			if($storage->incrementSizeStored($data_length)) {
+				$size_stored += $data_length;
+				$redis->set('token:'.$this->_token.':size_stored', $size_stored);
+			}
+			fclose($f);
+			$resp['code'] = 201;
+			$resp['status'] = 'success';
+			return $resp;
 		}
 
-		if(isset($_POST['data']) && isset($_POST['filename']) && isset($_POST['folder_id'])) {
-		    // Chunk sent by Ajax
-		    $data = $_POST['data'];
-			if($data !== 'EOF') $data .= "\r\n";
-		    $filename = $this->parseFilename($_POST['filename']);
-			$folder_id = $_POST['folder_id'];
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif(isset($data->data) && isset($data->filename) && isset($data->folder_id) && is_numeric($data->folder_id)) {
+			$cnt = $data->data;
+			if($cnt !== 'EOF') $cnt .= "\r\n";
+		    $filename = $this->parseFilename($data->filename);
+			$folder_id = $data->folder_id;
 
-			if($filename !== false && is_numeric($folder_id)) {
-				if(isset($_SESSION['upload'][$folder_id]['files'][$filename]) && isset($_SESSION['upload'][$folder_id]['path'])) {
+			if($filename !== false) {
+				$fp = $this->redis->get('token:'.$this->_token.':folder:'.$folder_id);
+				$fs = $this->redis->get('token:'.$this->_token.':folder:'.$folder_id.':'.$filename);
+				if($fs !== null && $fp !== null) {
 					// We have already write into this file in this session
-					if($_SESSION['upload'][$folder_id]['files'][$filename] == 0 || $_SESSION['upload'][$folder_id]['files'][$filename] == 1) {
-						$filepath = NOVA.'/'.$_SESSION['id'].'/'.$_SESSION['upload'][$folder_id]['path'].$filename;
-						write($filepath, $data);
+					if($fs == 0 || $fs == 1) {
+						$filepath = NOVA.'/'.$this->_uid.'/'.$fp.$filename;
+						$resp = write($filepath, $cnt, $resp, $this->redis);
 					}
 				}
 				else {
 					// Write into a new file (which exists or not)
-					$path = $this->getUploadFolderPath($folder_id);
-					if($path === false) {
-						echo 'error'; exit;
+					$path = $this->getUploadFolderPath(intval($folder_id));
+					if($path !== false) {
+						$filepath = NOVA.'/'.$this->_uid.'/'.$path.$filename;
+						$filestatus = $this->fileStatus($filepath);
+						$this->redis->set('token:'.$this->_token.':folder:'.$folder_id, $path);
+						$this->redis->set('token:'.$this->_token.':folder:'.$folder_id.':'.$filename, $filestatus);
+
+	                    if($filestatus !== 2) {
+							// The file doesn't exist or is not complete
+							// Insert into files table if this file is not present
+							$this->_modelFiles = new m\Files($this->_uid);
+							if(!($this->_modelFiles->exists($filename, $folder_id))) {
+								$this->_modelFiles->name = $filename;
+								$this->_modelFiles->size = -1;
+								$this->_modelFiles->last_modification = time();
+								$this->_modelFiles->addNewFile($folder_id);
+							}
+							$resp = write($filepath, $cnt, $resp, $this->redis);
+						}
 					}
 
-					$filepath = NOVA.'/'.$_SESSION['id'].'/'.$path.$filename;
-					$filestatus = $this->fileStatus($filepath);
-					$_SESSION['upload'][$folder_id]['files'][$filename] = $filestatus;
-					$_SESSION['upload'][$folder_id]['path'] = $path;
+					// End of file
+					$fp = $this->redis->get('token:'.$this->_token.':folder:'.$folder_id);
+					$fs = $this->redis->get('token:'.$this->_token.':folder:'.$folder_id.':'.$filename);
+					if($cnt === 'EOF' && $fs !== null && $fp !== null) {
+						// Update files table and folders size
+						if(!isset($this->_modelFiles)) {
+							$this->_modelFiles = new m\Files($this->_uid);
+						}
+						if(!isset($this->_modelFolders)) {
+							$this->_modelFolders = new m\Folders($this->_uid);
+						}
+						$this->_modelFiles->name = $filename;
+						$this->_modelFiles->size = filesize(NOVA.'/'.$this->_uid.'/'.$fp.$filename);
+						$this->_modelFiles->last_modification = time();
 
-                    if($filestatus == 2) { // The file exists, exit
-                        return;
-                    }
-					else {
-						// The file doesn't exist or is not complete
-						// Insert into files table if this file is not present
-						$this->_modelFiles = new m\Files($_SESSION['id']);
-
-						if(!($this->_modelFiles->exists($filename, $folder_id))) {
-							$this->_modelFiles->name = $filename;
-							$this->_modelFiles->size = -1;
-							$this->_modelFiles->last_modification = time();
-							$this->_modelFiles->addNewFile($folder_id);
+						if($this->_modelFiles->exists($filename, $folder_id)) {
+							$this->_modelFiles->updateFile($folder_id, false);
+						} else {
+							$this->_modelFiles->addNewFile($folder_id, false);
 						}
 
-						write($filepath, $data);
+						$this->_modelFolders->updateFoldersSize($folder_id, $this->_modelFiles->size);
+						// Remove the file from Redis because the status is now complete
+						$this->redis->del('token:'.$this->_token.':folder:'.$folder_id.':'.$filename);
 					}
 				}
+			}
+		} else {
+			$resp['message'] = 'emptyField';
+		}
 
-				// End of file
-				if($data === 'EOF' && isset($_SESSION['upload'][$folder_id]['files'][$filename]) && isset($_SESSION['upload'][$folder_id]['path'])) {
-					// Update files table and folders size
-					if(!isset($this->_modelFiles)) {
-						$this->_modelFiles = new m\Files($_SESSION['id']);
-					}
-					if(!isset($this->_modelFolders)) {
-						$this->_modelFolders = new m\Folders($_SESSION['id']);
-					}
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+	}
 
-					$this->_modelFiles->name = $filename;
-					$this->_modelFiles->size = filesize(NOVA.'/'.$_SESSION['id'].'/'.$_SESSION['upload'][$folder_id]['path'].$filename);
-					$this->_modelFiles->last_modification = time();
+	public function readAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$resp['token'] = $this->_token;
 
-					if($this->_modelFiles->exists($filename, $folder_id)) {
-						$this->_modelFiles->updateFile($folder_id, false);
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif(isset($data->filename) && isset($data->line) && is_numeric($data->line) && isset($data->folder_id) && is_numeric($data->folder_id)) {
+		    $filename = $this->parseFilename($data->filename);
+			if($filename !== false) {
+				$path = $this->getUploadFolderPath(intval($data->folder_id));
+				if($path !== false) {
+					$resp['code'] = 200;
+					$resp['status'] = 'success';
+					$filepath = NOVA.'/'.$this->_uid.'/'.$path.$filename;
+					$file = new \SplFileObject($filepath, 'r');
+				    $file->seek($data->line);
+				    $resp['data'] = str_replace("\r\n", "", $file->current());
+				} else {
+					$resp['message'] = 'notExists';
+				}
+			} else {
+				$resp['message'] = 'notExists';
+			}
+		} else {
+			$resp['message'] = 'emptyField';
+		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+	}
+
+	public function chunkAction() { // Alias
+		$this->readAction();
+	}
+
+	public function nbChunksAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$resp['token'] = $this->_token;
+
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif(isset($_data->filename) && isset($data->folder_id) && is_numeric($data->folder_id)) {
+			$resp['data'] = 0;
+			$filename = $this->parseFilename($data->filename);
+			if($filename !== false) {
+				$path = $this->getUploadFolderPath(intval($data->folder_id));
+				if($path !== false) {
+					$filepath = NOVA.'/'.$this->_uid.'/'.$path.$filename;
+				    if(file_exists($filepath)) {
+						$resp['code'] = 200;
+						$resp['status'] = 'success';
+				        $file = new \SplFileObject($filepath, 'r');
+				        $file->seek(PHP_INT_MAX);
+						if($file->current() === "EOF") { // A line with "EOF" at the end of the file when the file is complete
+							$resp['data'] = $file->key()-1;
+						} else {
+							$resp['data'] = $file->key();
+						}
 					} else {
-						$this->_modelFiles->addNewFile($folder_id, false);
+						$resp['message'] = 'notExists';
 					}
-
-					$this->_modelFolders->updateFoldersSize($folder_id, $this->_modelFiles->size);
-
-					// Remove the file from SESSION upload because the status is now complete
-					unset($_SESSION['upload'][$folder_id]['files'][$filename]);
+				} else {
+					$resp['message'] = 'notExists';
 				}
+			} else {
+				$resp['message'] = 'notExists';
 			}
+		} else {
+			$resp['message'] = 'emptyField';
 		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
 	}
 
-	public function getChunkAction() {
-		if(isset($_POST['filename']) && isset($_POST['line']) && isset($_POST['folder_id'])) {
-			// Get a chunk with Ajax
-		    $line = $_POST['line'];
-		    $filename = $this->parseFilename($_POST['filename']);
-			$folder_id = $_POST['folder_id'];
-
-			if($filename !== false && is_numeric($folder_id)) {
-				$path = $this->getUploadFolderPath($folder_id);
-				if($path === false) {
-					echo 'error';
-					exit;
-				}
-
-				$filepath = NOVA.'/'.$_SESSION['id'].'/'.$path.$filename;
-				$file = new \SplFileObject($filepath, 'r');
-			    $file->seek($line);
-
-			    echo str_replace("\r\n", "", $file->current());
-			}
-		}
-	}
-
-	public function getNbChunksAction() {
-		if(isset($_POST['filename']) && isset($_POST['folder_id'])) {
-		    // Get number of chunks with Ajax
-		    $filename = $this->parseFilename($_POST['filename']);
-			$folder_id = $_POST['folder_id'];
-
-			if($filename !== false && is_numeric($folder_id)) {
-				$path = $this->getUploadFolderPath($folder_id);
-				if($path === false) {
-					echo '0';
-					exit;
-				}
-
-				$filepath = NOVA.'/'.$_SESSION['id'].'/'.$path.$filename;
-			    if(file_exists($filepath)) {
-			        $file = new \SplFileObject($filepath, 'r');
-			        $file->seek(PHP_INT_MAX);
-
-					if($file->current() === "EOF") { // A line with "EOF" at the end of the file when the file is complete
-						echo $file->key()-1;
-					} else {
-						echo $file->key();
-					}
-				}
-				else {
-					echo '0';
-				}
-			}
-			else {
-				echo '0';
-			}
-		}
-	}
-
-	public function getFileStatusAction() {
+	public function statusAction() {
         // Return a message/code according to file status
 		// Client side : If the file exists, ask the user if he wants to replace it
 		// Also check the quota
-		if(isset($_POST['filesize']) && isset($_POST['filename']) && isset($_POST['folder_id'])) {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$resp['token'] = $this->_token;
+
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif(isset($data->filesize) && isset($data->filename) && isset($data->folder_id) && is_numeric($data->folder_id) && is_numeric($data->filesize)) {
 			// size_stored_tmp includes files currently uploading (new session variable because we can't trust a value sent by the client)
 			// Used only to compare, if user sent a fake value, it will start uploading process but it will stop in the first chunk because we update size_stored for every chunk
-			if(empty($_SESSION['size_stored_tmp'])) {
-				$_SESSION['size_stored_tmp'] = $_SESSION['size_stored'];
-			}
-
-			$filename = $this->parseFilename($_POST['filename']);
-			$folder_id = $_POST['folder_id'];
-			$filesize = $_POST['filesize'];
-
-			if($filename !== false && is_numeric($folder_id) && is_numeric($filesize)) {
-				if($_SESSION['size_stored_tmp']+$filesize > $_SESSION['user_quota']) {
-					echo 'quota';
-					exit;
-				}
-				$_SESSION['size_stored_tmp'] += $filesize;
-
-				$path = $this->getUploadFolderPath($folder_id);
-				if($path === false) {
-					echo '0';
-					exit;
+			$user_quota = $redis->get('token:'.$this->_token.':user_quota');
+			$size_stored = $redis->get('token:'.$this->_token.':size_stored');
+			$size_stored_tmp = $redis->get('token:'.$this->_token.':size_stored_tmp');
+			$filename = $this->parseFilename($data->filename);
+			if($size_stored !== null && $filename !== false) {
+				if($size_stored_tmp === null) {
+					$size_stored_tmp = $size_stored;
+					$redis->set('token:'.$this->_token.':size_stored_tmp', $size_stored_tmp);
 				}
 
-				$filepath = NOVA.'/'.$_SESSION['id'].'/'.$path.$filename;
-				echo $this->filestatus($filepath);
-			} else {
-				echo 'err';
+				if($size_stored_tmp + $data->filesize <= $user_quota) {
+					$resp['code'] = 200;
+					$resp['status'] = 'success';
+					$size_stored_tmp += $data->filesize;
+					$redis->set('token:'.$this->_token.':size_stored_tmp', $size_stored_tmp);
+					$path = $this->getUploadFolderPath(intval($data->folder_id));
+					if($path !== false) {
+						$filepath = NOVA.'/'.$this->_uid.'/'.$path.$filename;
+						$status = explode('@', $this->filestatus($filepath));
+						if(count($status) === 2) {
+							$resp['data']['line'] = $status[1];
+						}
+						$resp['data']['status'] = $status[0];
+					} else {
+						$resp['data']['status'] = 0;
+					}
+				} else {
+					$resp['message'] = 'quota';
+				}
 			}
 		} else {
-			echo 'err';
+			$resp['message'] = 'emptyField';
 		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+	}
+
+	public function renameAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$resp['token'] = $this->_token;
+
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif(isset($data->old) && isset($data->new) && isset($data->folder_id) && is_numeric($data->folder_id)) {
+			$this->_modelFiles = new m\Files($this->_uid);
+			$this->_modelFolders = new m\Folders($this->_uid);
+
+			$old = urldecode($data->old);
+			$new = $this->parseFilename(urldecode($data->new));
+			if(strlen($new) > 128) { // max file length 128 chars
+				$new = substr($new, 0, 128);
+			}
+
+			if($new !== false && $old !== $new) {
+				$path = $this->_modelFolders->getFullPath($data->folder_id);
+				if($path !== '') $path .= '/';
+
+				if(file_exists(NOVA.'/'.$this->_uid.'/'.$path.$old) && !file_exists(NOVA.'/'.$this->_uid.'/'.$path.$new)) {
+					$resp['code'] = 200;
+					$resp['status'] = 'success';
+					$this->redis->del('token:'.$this->_token.':folder:'.$data->folder_id.':'.$old);
+					$this->_modelFiles->rename($data->folder_id, $old, $new);
+					rename(NOVA.'/'.$this->_uid.'/'.$path.$old, NOVA.'/'.$this->_uid.'/'.$path.$new);
+				} else {
+					$resp['message'] = 'exists';
+				}
+			}
+		} else {
+			$resp['message'] = 'emptyField';
+		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+	}
+
+	/*public function FavoritesAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$resp['token'] = $this->_token;
+
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		} elseif(isset($data->id) && is_numeric($data->id)) {
+			$resp['code'] = 200;
+			$resp['status'] = 'success';
+			$this->_modelFiles = new m\Files($this->_uid);
+			$this->_modelFiles->setFavorite($data->id);
+		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+	}*/
+
+	public function DefaultAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$resp['token'] = $this->_token;
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
 	}
 
 	private function fileStatus($f) {
 		// Returns 0 when the file doesn't exist, 1 when it exists and not complete, 2 when it exists and is complete
 		if(file_exists($f)) {
-		    $file = new \SplFileObject($f, 'r');
-		    $file->seek(PHP_INT_MAX);
-            $file->seek($file->key()); // Point to the last line
+			$file = new \SplFileObject($f, 'r');
+			$file->seek(PHP_INT_MAX);
+			$file->seek($file->key()); // Point to the last line
 
 			if($file->current() === "EOF") { // A line with "EOF" at the end of the file when the file is complete
 				return 2;
@@ -225,57 +340,4 @@ class files extends c\FileManager {
 		}
 		return 0;
 	}
-
-	public function FavoritesAction() {
-		if(isset($_POST['id']) && is_numeric($_POST['id'])) {
-			$id = $_POST['id'];
-			$this->_modelFiles = new m\Files($_SESSION['id']);
-			$this->_modelFiles->setFavorite($id);
-		}
-	}
-
-	public function RenameAction() {
-        $this->_modelFiles = new m\Files($_SESSION['id']);
-        $this->_modelFolders = new m\Folders($_SESSION['id']);
-
-        if(isset($_POST['old']) && isset($_POST['new']) && isset($_POST['folder_id'])) {
-            $folder_id = urldecode($_POST['folder_id']);
-            if(!is_numeric($folder_id)) return false;
-            $old = urldecode($_POST['old']);
-            $new = urldecode($_POST['new']);
-            $new = $this->parseFilename($new);
-
-            if($old != $new && !empty($old) && !empty($new)) {
-                $path = $this->_modelFolders->getFullPath($folder_id);
-                if($path != '') $path .= '/';
-
-                if(is_dir(NOVA.'/'.$_SESSION['id'].'/'.$path.$old) && !is_dir(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) {
-                    if(strlen($new) > 64) { // max folder length 64 chars
-                        $new = substr($new, 0, 64);
-						if(is_dir(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) return false;
-					}
-                    // Rename folder in db
-                    $this->_modelFolders->rename($path, $old, $new);
-                }
-                elseif(file_exists(NOVA.'/'.$_SESSION['id'].'/'.$path.$old) && !file_exists(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) {
-                    if(strlen($new) > 128) { // max file length 128 chars
-                        $new = substr($new, 0, 128);
-						if(file_exists(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) return false;
-					}
-
-                    // Rename file in db
-					if(isset($_SESSION['upload'][$folder_id]['files'][$old])) {
-						unset($_SESSION['upload'][$folder_id]['files'][$old]);
-					}
-                    $this->_modelFiles->rename($folder_id, $old, $new);
-                }
-                else {
-                    return false;
-                }
-
-                rename(NOVA.'/'.$_SESSION['id'].'/'.$path.$old, NOVA.'/'.$_SESSION['id'].'/'.$path.$new);
-				echo 'ok';
-            }
-        }
-    }
 }
