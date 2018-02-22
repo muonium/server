@@ -18,7 +18,10 @@ class folders extends c\FileManager {
 		$data = h\httpMethodsData::getValues();
 		$resp['token'] = $this->_token;
 
-        if(isset($data->name)) {
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+        elseif(isset($data->name)) {
 			$this->getFolderVars();
             $folder = $this->parseFilename(urldecode($data->name));
             if(strlen($folder) > 64) { // max length 64 chars
@@ -46,81 +49,80 @@ class folders extends c\FileManager {
 		echo json_encode($resp);
     }
 
-	public function ChangePathAction() {
-        if(!isset($_POST['folder_id'])) {
-            $folder_id = 0;
-        } elseif(!is_numeric($_POST['folder_id'])) {
-            return false;
-        } else {
-            $folder_id = urldecode($_POST['folder_id']);
+	public function openAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$resp['token'] = $this->_token;
+
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		} else {
+			$folder_id = isset($data->folder_id) && is_pos_digit($data->folder_id) ? intval($data->folder_id) : 0;
+			$this->_trash = isset($data->trash) && $data->trash == 1 ? 1 : 0;
+			if($folder_id === 0) { // root
+				$this->_path = '';
+				$this->_folderId = 0;
+				$resp = $this->getTree($resp);
+			} else {
+				$this->_modelFolders = new m\Folders($this->_uid);
+				$path = $this->_modelFolders->getPath($folder_id);
+				if($path !== false) {
+					$path .= $this->_modelFolders->getFoldername($folder_id);
+					if(is_dir(NOVA.'/'.$this->_uid.'/'.$path)) {
+						$this->_path = $path;
+						$this->_folderId = $folder_id;
+						$resp = $this->getTree($resp);
+					}
+				}
+			}
 		}
 
-        $this->trash = empty($_POST['trash']) ? 0 : 1;
-
-        if($folder_id == 0) {
-            // root
-            $this->_path = '';
-            $this->_folderId = 0;
-            $this->getTree();
-        }
-        else {
-            $this->_modelFolders = new m\Folders($_SESSION['id']);
-
-            $path = $this->_modelFolders->getPath($folder_id);
-            if($path === false) return false;
-            $path .= $this->_modelFolders->getFoldername($folder_id);
-
-            if(is_dir(NOVA.'/'.$_SESSION['id'].'/'.$path)) {
-                $this->_path = $path;
-                $this->_folderId = $folder_id;
-                $this->getTree();
-            }
-        }
+		http_response_code($resp['code']);
+		echo json_encode($resp);
     }
 
-	public function RenameAction() {
-        $this->_modelFiles = new m\Files($_SESSION['id']);
-        $this->_modelFolders = new m\Folders($_SESSION['id']);
+	public function renameAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$resp['token'] = $this->_token;
 
-        if(isset($_POST['old']) && isset($_POST['new']) && isset($_POST['folder_id'])) {
-            $folder_id = urldecode($_POST['folder_id']);
-            if(!is_numeric($folder_id)) return false;
-            $old = urldecode($_POST['old']);
-            $new = urldecode($_POST['new']);
-            $new = $this->parseFilename($new);
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif(isset($data->old) && isset($data->new) && isset($data->folder_id) && is_pos_digit($data->folder_id) && $data->folder_id != 0) {
+			$this->_modelFiles = new m\Files($this->_uid);
+			$this->_modelFolders = new m\Folders($this->_uid);
 
-            if($old != $new && !empty($old) && !empty($new)) {
-                $path = $this->_modelFolders->getFullPath($folder_id);
-                if($path != '') $path .= '/';
+			$old = urldecode($data->old);
+			$new = $this->parseFilename(urldecode($data->new));
+			if(strlen($new) > 64) { // max folder length 128 chars
+				$new = substr($new, 0, 128);
+			}
 
-                if(is_dir(NOVA.'/'.$_SESSION['id'].'/'.$path.$old) && !is_dir(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) {
-                    if(strlen($new) > 64) { // max folder length 64 chars
-                        $new = substr($new, 0, 64);
-						if(is_dir(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) return false;
+            if($new !== false && $old !== $new) {
+                $path = $this->_modelFolders->getFullPath($data->folder_id);
+				if($path !== false) {
+	                if($path !== '') $path .= '/';
+	                if(is_dir(NOVA.'/'.$this->_uid.'/'.$path.$old) && !is_dir(NOVA.'/'.$this->_uid.'/'.$path.$new)) {
+						$resp['code'] = 200;
+						$resp['status'] = 'success';
+						$this->_modelFolders->rename($path, $old, $new);
+						rename(NOVA.'/'.$this->_uid.'/'.$path.$old, NOVA.'/'.$this->_uid.'/'.$path.$new);
+	                } else {
+						$resp['message'] = 'exists';
 					}
-                    // Rename folder in db
-                    $this->_modelFolders->rename($path, $old, $new);
-                }
-                elseif(file_exists(NOVA.'/'.$_SESSION['id'].'/'.$path.$old) && !file_exists(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) {
-                    if(strlen($new) > 128) { // max file length 128 chars
-                        $new = substr($new, 0, 128);
-						if(file_exists(NOVA.'/'.$_SESSION['id'].'/'.$path.$new)) return false;
-					}
-
-                    // Rename file in db
-					if(isset($_SESSION['upload'][$folder_id]['files'][$old])) {
-						unset($_SESSION['upload'][$folder_id]['files'][$old]);
-					}
-                    $this->_modelFiles->rename($folder_id, $old, $new);
-                }
-                else {
-                    return false;
-                }
-
-                rename(NOVA.'/'.$_SESSION['id'].'/'.$path.$old, NOVA.'/'.$_SESSION['id'].'/'.$path.$new);
-				echo 'ok';
+				}
             }
-        }
+        } else {
+			$resp['message'] = 'emptyField';
+		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
     }
 
 	public function DefaultAction() {
@@ -131,121 +133,74 @@ class folders extends c\FileManager {
 		$resp['token'] = $this->_token;
 	}
 
-	private function getTree() {
+	private function getTree($resp) {
         $i = 0;
-        $this->_modelFiles = new m\Files($_SESSION['id']);
+		$resp['code'] = 200;
+		$resp['status'] = 'success';
 
-        if(empty($this->_modelFolders)) {
-            $this->_modelFolders = new m\Folders($_SESSION['id']);
-        }
+		if(!isset($this->_modelFiles)) {
+			$this->_modelFiles = new m\Files($this->_uid);
+		}
+		if(!isset($this->_modelFolders)) {
+			$this->_modelFolders = new m\Folders($this->_uid);
+		}
 
-        $this->_modelStorage = new m\Storage($_SESSION['id']);
+        $this->_modelStorage = new m\Storage($this->_uid);
         $quota = $this->_modelStorage->getUserQuota();
         $stored = $this->_modelStorage->getSizeStored();
 
 		if($quota !== false && $stored !== false) {
-			$_SESSION['size_stored'] = $stored;
-			$_SESSION['user_quota'] = $quota;
+			$redis->set('token:'.$this->_token.':user_quota', $quota);
+			$redis->set('token:'.$this->_token.':size_stored', $stored);
 		}
 
-		$path = $this->_modelFolders->getFullPath($this->_folderId);
+		$path = htmlspecialchars($this->_modelFolders->getFullPath($this->_folderId));
 		$path_d = explode('/', $path);
-		echo '<h1 class="inline" title="'.$path.'">'.($path == '' ? self::$txt->Global->home : end($path_d)).'</h1>';
-        // Link to parent folder
-		if($this->_folderId != 0) {
-            $parent = $this->_modelFolders->getParent($this->_folderId);
-            echo '<a id="parent-'.$parent.'" onclick="Folders.open('.$parent.')"><i class="fa fa-caret-up" aria-hidden="true"></i></a>';
-        }
 
-		$pct = round($stored/$quota*100, 2);
-        echo '
-			<div class="quota">
-				<div class="progress_bar">
-					<div class="used" style="width:'.$pct.'%"></div>
-				</div>
-        	'.str_replace(['[used]', '[total]'], ['<strong>'.showSize($stored).'</strong>', '<strong>'.showSize($quota).'</strong>'], self::$txt->User->quota_of).' - '.$pct.'%
-			</div>
-		';
-        echo '
-			<table id="tree">
-				<tr id="tree_head">
-					<th width="44px"><input type="checkbox" id="sel_all"><label for="sel_all"></label></th>
-					<th></th>
-					<th>Name</th>
-					<th>Size</th>
-					<th>Uploaded</th>
-					<th>Options</th>
-				</tr>
-		';
+		$resp['data']['path']    = $path;
+		$resp['data']['title']   = $path === '' ? self::$txt->Global->home : end($path_d);
+		$resp['data']['stored']  = $stored;
+		$resp['data']['quota']   = $quota;
+		$resp['data']['folders'] = [];
+		$resp['data']['files']   = [];
+
+		if($this->_folderId != 0) {
+            $resp['data']['parent'] = $this->_modelFolders->getParent($this->_folderId);
+        }
 
         if($subdirs = $this->_modelFolders->getChildren($this->_folderId, $this->trash)) {
             foreach($subdirs as $subdir) {
-                $elementnum = count(glob(NOVA.'/'.$_SESSION['id'].'/'.$subdir['path'].$subdir['name']."/*"));
-                $subdir['name'] = $this->parseFilename($subdir['name']);
-
-                echo '
-				<tr class="folder" id="d'.$subdir['id'].'" name="'.htmlentities($subdir['name']).'"
-	                title="'.showSize($subdir['size']).'"
-	                data-folder="'.htmlentities($subdir['parent']).'"
-	                data-path="'.htmlentities($subdir['path']).'"
-	                data-title="'.htmlentities($subdir['name']).'"
-					onclick="Selection.addFolder(event, \'d'.$subdir['id'].'\')"
-					ondblclick="Folders.open('.$subdir['id'].')"
-					draggable="true"
-				>
-					<td><input type="checkbox" id="sel_d'.$subdir['id'].'"><label for="sel_d'.$subdir['id'].'"></label></td>
-					<td><img src="'.IMG.'desktop/extensions/folder.svg" class="icon"></td>
-					<td>
-						<strong>'.htmlentities($subdir['name']).'</strong>
-						['.$elementnum.' '.($elementnum > 1 ? self::$txt->User->elements : self::$txt->User->element).']
-					</td>
-					<td></td>
-					<td></td>
-					<td><a href="#" class="btn btn-actions"></a></td>
-				</tr>
-				';
+				$folder = [];
+				$folder['id'] = $subdir['id'];
+				$folder['name'] = htmlspecialchars($this->parseFilename($subdir['name']));
+				$folder['size'] = $subdir['size'];
+				$folder['path'] = htmlspecialchars($subdir['path']);
+				$folder['parent'] = htmlspecialchars($subdir['parent']);
+                $folder['nb_elements'] = count(glob(NOVA.'/'.$this->_uid.'/'.$subdir['path'].$subdir['name']."/*"));
+				$resp['data']['folders'][] = $folder;
             }
         }
-		echo '<tr class="break"></tr>';
+
         if($files = $this->_modelFiles->getFiles($this->_folderId, $this->trash)) {
             foreach($files as $file) {
-				$is_shared = ($file['dk'] === null || strlen($file['dk']) === 0) ? 0 : 1;
-                $fpath = $path;
-                $file['name'] = $this->parseFilename($file['name']);
+				$fpath = $path;
                 if(array_key_exists('path', $file) && array_key_exists('dname', $file)) {
                     $fpath = $file['path'].$file['dname'];
                 }
-
-                if($file['size'] < 0) {
-                    $filesize = '['.self::$txt->User->notCompleted.'] '.showSize(@filesize(NOVA.'/'.$_SESSION['id'].'/'.$fpath.'/'.$file['name']));
-                } else {
-                    $filesize = showSize($file['size']);
-                }
-				$lastmod = date(self::$txt->Dates->date.' '.self::$txt->Dates->time, $file['last_modification']);
-
-                echo '
-				<tr class="file" id="f'.$file['id'].'" '.($file['size'] < 0 ? 'style="color:red" ' : '').'
-                	title="'.$filesize.'&#10;'.self::$txt->User->lastmod.': '.$lastmod.'"
-	                data-folder="'.htmlentities($file['folder_id']).'"
-	                data-path="'.htmlentities($fpath).'"
-	                data-title="'.htmlentities($file['name']).'"
-					data-shared="'.$is_shared.'"
-					data-url="'.URL_APP.'/dl/?'.setURL($file['id']).'"
-					onclick="Selection.addFile(event, \'f'.$file['id'].'\')"
-					ondblclick="Selection.dl(\'f'.$file['id'].'\')"
-					draggable="true"
-				>
-					<td><input type="checkbox" id="sel_f'.$file['id'].'"><label for="sel_f'.$file['id'].'"></label></td>
-					<td></td>
-					<td><strong>'.htmlentities($file['name']).'</strong></td>
-					<td>'.$filesize.'</td>
-					<td>'.$lastmod.'</td>
-					<td><a href="#" class="btn btn-actions"></a></td>
-				</tr>
-				';
+				$f = [];
+				$f['id'] = $file['id'];
+				$f['is_shared'] = $file['dk'] === null || strlen($file['dk']) === 0 ? false : true;
+				$f['name'] = htmlspecialchars($this->parseFilename($file['name']));
+				$f['folder_id'] = htmlspecialchars($file['folder_id']);
+				$f['path'] = htmlspecialchars($fpath);
+				$f['is_completed'] = $file['size'] < 0 ? false : true;
+				$f['size'] = $f['is_completed'] ? $file['size'] : @filesize(NOVA.'/'.$this->_uid.'/'.$fpath.'/'.$file['name']);
+				$f['lastmod'] = $file['last_modification'];
+				$f['url'] = URL_APP.'/dl/?'.setURL($file['id']);
+				$resp['data']['files'][] = $f;
             }
         }
 
-        echo '</table>';
+        return $resp;
     }
 }

@@ -12,6 +12,11 @@ class FileManager extends l\Controller {
 	public $_folderId = 0; 		// current folder id (0 = root)
 	public $_trash = 0; 		// 0 : view contents not in the trash || 1 : view contents in the trash
 
+	protected $_modelFiles;
+	protected $_modelFolders;
+	protected $_modelStorage;
+	protected $_modelUsers;
+
 	protected $redis = null;
 
 	function __construct() {
@@ -63,7 +68,7 @@ class FileManager extends l\Controller {
 			return false;
 		}
 
-		if($path != '') $path .= '/';
+		if($path !== '') $path .= '/';
 		$this->redis->set('token:'.$this->_token.':folder:'.$folder_id, $path);
 		return $path;
 	}

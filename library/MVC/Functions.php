@@ -33,3 +33,15 @@ function currencySymbol($currency) {
 	];
 	return array_key_exists(strtoupper($currency), $currencies) ? $currencies[strtoupper($currency)] : $currency;
 }
+
+function is_digit($digit, $allow_negative = true) {
+	if(is_int($digit)) {
+		return !$allow_negative && $digit < 0 ? false : true;
+	} elseif(is_string($digit)) {
+		return $allow_negative && $digit[0] === '-' ? ctype_digit(substr($digit, 1)) : ctype_digit($digit);
+	}
+	return false;
+}
+function is_pos_digit($digit) {
+	return is_digit($digit, false);
+}
