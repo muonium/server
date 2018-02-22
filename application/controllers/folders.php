@@ -134,7 +134,6 @@ class folders extends c\FileManager {
 	}
 
 	private function getTree($resp) {
-        $i = 0;
 		$resp['code'] = 200;
 		$resp['status'] = 'success';
 

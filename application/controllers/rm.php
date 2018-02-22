@@ -17,36 +17,27 @@ class rm extends c\FileManager {
 		$method = h\httpMethodsData::getMethod();
 		$data = h\httpMethodsData::getValues();
 		$resp['token'] = $this->_token;
+
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		} else {
+			$this->_modelFolders = new m\Folders($this->_uid);
+	        $this->_modelFiles = new m\Files($this->_uid);
+
+			if(isset($data->files) && is_array($data->files)) {
+				$this->rmFiles($data->files);
+			}
+			if(isset($data->folders) && is_array($data->folders)) {
+				// ex: "folders":[{"folder_id":25,"parent":0},{"folder_id":12,"parent":1}]
+				$this->rmFolders($data->folders);
+			}
+		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
 	}
 
-	private function rmFile($id, $path, $folder_id) {
-		// $folder_id is used only to delete session var
-        if(is_numeric($id)) {
-            $filename = $this->_modelFiles->getFilename($id);
-            if($filename !== false) {
-                if(file_exists(NOVA.'/'.$_SESSION['id'].'/'.$path.$filename)) {
-					if(isset($_SESSION['upload'][$folder_id]['files'][$filename])) {
-						unset($_SESSION['upload'][$folder_id]['files'][$filename]);
-                    }
-                    // deleteFile() returns file size
-                    $fsize = $this->_modelFiles->deleteFile($id);
-                    $completed = true;
-                    if($fsize == -1) {
-                        $completed = false;
-                        $fsize = @filesize(NOVA.'/'.$_SESSION['id'].'/'.$path.$filename);
-                    }
-                    unlink(NOVA.'/'.$_SESSION['id'].'/'.$path.$filename);
-                    return [$fsize, $completed];
-                }
-            }
-        }
-        return [0, true];
-    }
-
-    public function RmFilesAction() {
-        $this->_modelFolders = new m\Folders($_SESSION['id']);
-        $this->_modelFiles = new m\Files($_SESSION['id']);
-
+	private function rmFiles($files) {
         $total_size = 0;
         $tab_folders = []; // key : folder id, value : array ( path to folder, updated size )
         $path = '';
@@ -85,7 +76,7 @@ class rm extends c\FileManager {
                 }
 
                 // Decrement storage counter
-                $this->_modelStorage = new m\Storage($_SESSION['id']);
+                $this->_modelStorage = new m\Storage($this->_uid);
                 if($this->_modelStorage->decrementSizeStored($total_size)) {
 					$_SESSION['size_stored'] -= $total_size;
 				}
@@ -99,58 +90,11 @@ class rm extends c\FileManager {
         echo 'done';
     }
 
-    private function rmRdir($id) {
-        // This is a recursive method
-        if(is_numeric($id)) {
-            $path = $this->_modelFolders->getFullPath($id);
-            if($path !== false) {
-                $full_path = NOVA.'/'.$_SESSION['id'].'/'.$path;
-                if(is_dir($full_path)) {
-					if(isset($_SESSION['upload'][$id])) unset($_SESSION['upload'][$id]);
-                    // Delete subfolders
-                    if($subdirs = $this->_modelFolders->getChildren($id)) {
-                        foreach($subdirs as $subdir) {
-                            $this->rmRdir($subdir['id']);
-						}
-                    }
-
-                    // Delete files
-                    foreach(glob("{$full_path}/*") as $file) {
-                        if(is_file($file)) unlink($file);
-                    }
-
-                    // Delete files in db
-                    $this->_modelFiles->deleteFiles($id);
-
-                    // Delete folder
-                    rmdir($full_path);
-                }
-            }
-        }
-    }
-
-    private function rmFolder($id) {
-        if(!is_numeric($id)) return 0;
-
-        $size = $this->_modelFolders->getSize($id);
-        if($size === false) return 0;
-
-        // Delete folder, files, subfolders and also files in db
-        $this->rmRdir($id);
-
-        // Delete folders and subfolders in db and update parents folder size
-        $this->_modelFolders->delete($id);
-        return $size;
-    }
-
-    public function RmFoldersAction() {
-        $this->_modelFolders = new m\Folders($_SESSION['id']);
-        $this->_modelFiles = new m\Files($_SESSION['id']);
-
+	private function rmFolders($folders) {
         $total_size = 0;
         $tab_folders = []; // key : folder id, value : updated size
         $path = '';
-
+// ids : parent folder id, folders : folder id
         if(isset($_POST['folders']) && isset($_POST['ids'])) {
             $folders = explode("|", urldecode($_POST['folders']));
             $ids = explode("|", urldecode($_POST['ids']));
@@ -168,7 +112,7 @@ class rm extends c\FileManager {
                 }
 
                 // Decrement storage counter
-                $this->_modelStorage = new m\Storage($_SESSION['id']);
+                $this->_modelStorage = new m\Storage($this->_uid);
                 if($this->_modelStorage->decrementSizeStored($total_size)) {
 					$_SESSION['size_stored'] -= $total_size;
 				}
@@ -180,5 +124,76 @@ class rm extends c\FileManager {
             }
         }
         echo 'done';
+    }
+
+	private function rmFile($id, $path, $folder_id) {
+		// $folder_id is used only to delete Redis record
+        if(!is_pos_digit($id) || !is_pos_digit($folder_id)) {
+			return [0, true];
+		}
+        $filename = $this->_modelFiles->getFilename($id);
+        if($filename !== false) {
+            if(file_exists(NOVA.'/'.$this->_uid.'/'.$path.$filename)) {
+				$this->redis->del('token:'.$this->_token.':folder:'.$folder_id.':'.$filename);
+                // deleteFile() returns file size
+                $fsize = $this->_modelFiles->deleteFile($id);
+                $completed = true;
+                if($fsize === -1) {
+                    $completed = false;
+                    $fsize = @filesize(NOVA.'/'.$this->_uid.'/'.$path.$filename);
+                }
+                unlink(NOVA.'/'.$this->_uid.'/'.$path.$filename);
+                return [$fsize, $completed];
+            }
+        }
+        return [0, true];
+    }
+
+    private function rmRdir($id) {
+        // This is a recursive method
+        if(!is_pos_digit($id)) {
+			return;
+		}
+        $path = $this->_modelFolders->getFullPath($id);
+        if($path === false) {
+			return;
+		}
+        $full_path = NOVA.'/'.$this->_uid.'/'.$path;
+        if(!is_dir($full_path)) {
+			return;
+		}
+		$this->redis->del('token:'.$this->_token.':folder:'.$id);
+
+        // Delete subfolders
+        if($subdirs = $this->_modelFolders->getChildren($id)) {
+            foreach($subdirs as $subdir) {
+                $this->rmRdir($subdir['id']);
+			}
+        }
+        // Delete files
+        foreach(glob("{$full_path}/*") as $file) {
+            if(is_file($file)) {
+				unlink($file);
+			}
+        }
+        // Delete files in db
+        $this->_modelFiles->deleteFiles($id);
+        // Delete folder
+        rmdir($full_path);
+    }
+
+    private function rmFolder($id) {
+        if(!is_pos_digit($id)) {
+			return 0;
+		}
+        $size = $this->_modelFolders->getSize($id);
+        if($size === false) {
+			return 0;
+		}
+        // Delete folder, files, subfolders and also files in db
+        $this->rmRdir($id);
+        // Delete folders and subfolders in db and update parents folder size
+        $this->_modelFolders->delete($id);
+        return $size;
     }
 }
