@@ -21,6 +21,8 @@ class rm extends c\FileManager {
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		} else {
+			$resp['code'] = 200;
+			$resp['status'] = 'success';
 			$this->_modelFolders = new m\Folders($this->_uid);
 	        $this->_modelFiles = new m\Files($this->_uid);
 
@@ -28,7 +30,6 @@ class rm extends c\FileManager {
 				$this->rmFiles($data->files);
 			}
 			if(isset($data->folders) && is_array($data->folders)) {
-				// ex: "folders":[{"folder_id":25,"parent":0},{"folder_id":12,"parent":1}]
 				$this->rmFolders($data->folders);
 			}
 		}
@@ -39,91 +40,87 @@ class rm extends c\FileManager {
 
 	private function rmFiles($files) {
         $total_size = 0;
-        $tab_folders = []; // key : folder id, value : array ( path to folder, updated size )
+        $tab_folders = []; // key: folder id, value: array (path to folder, updated size)
+		$removed_files = [];
         $path = '';
 
-        if(isset($_POST['files']) && isset($_POST['ids'])) {
-            $files = explode("|", urldecode($_POST['files']));
-            $ids = explode("|", urldecode($_POST['ids']));
-
-            $nbFiles = count($files);
-            $nbIds = count($ids);
-
-            if($nbFiles === $nbIds && $nbFiles > 0) {
-                for($i = 0; $i < $nbFiles; $i++) {
-                    $folder_id = $ids[$i];
-                    if(array_key_exists($folder_id, $tab_folders)) {
-                        $path = $tab_folders[$folder_id][0];
+		foreach($files as $file) {
+			if(isset($file->folder_id) && isset($file->id) && is_pos_digit($file->folder_id) && is_pos_digit($file->id)) {
+				if(in_array(intval($file->id), $removed_files)) {
+					continue; // Already removed
+				}
+				if(array_key_exists(intval($file->folder_id), $tab_folders)) {
+					$path = $tab_folders[intval($file->folder_id)][0];
+				} else {
+					$path = $this->_modelFolders->getFullPath($file->folder_id);
+					if($path === false) {
+						continue;
 					}
-                    else {
-                        $path = $this->_modelFolders->getFullPath($folder_id);
-                        if($path === false) continue;
-                        $tab_folders[$folder_id][0] = $path;
-                        $tab_folders[$folder_id][1] = 0;
-                    }
-
-                    $fsize = $this->rmFile($files[$i], $path.'/', $folder_id);
-                    if(count($fsize) != 2) continue;
-                    $size = $fsize[0];
-                    if($fsize[1] === false) {
-                        $total_size += $size;
-                        // It's not necessary here to update folder size because when the file is not completed, the folder size wasn't updated
-                    }
-                    else {
-                        $total_size += $size;
-                        $tab_folders[$folder_id][1] += $size;
-                    }
-                }
-
-                // Decrement storage counter
-                $this->_modelStorage = new m\Storage($this->_uid);
-                if($this->_modelStorage->decrementSizeStored($total_size)) {
-					$_SESSION['size_stored'] -= $total_size;
+					$tab_folders[intval($file->folder_id)] = [$path, 0];
 				}
-
-                // Update folders size
-                foreach($tab_folders as $key => $val) {
-                    $this->_modelFolders->updateFoldersSize($key, -1*$val[1]);
+				$fsize = $this->rmFile(intval($file->id), $path.'/', intval($file->folder_id));
+				if(count($fsize) !== 2) {
+					continue;
 				}
-            }
-        }
-        echo 'done';
+				$total_size += $fsize[0];
+				if($fsize[1] === true) { // Update folder size only for completed files.
+					$tab_folders[intval($file->folder_id)][1] += $fsize[0];
+				}
+			}
+		}
+        // Decrement storage counter
+		if($total_size > 0) {
+	        $this->_modelStorage = new m\Storage($this->_uid);
+	        if($this->_modelStorage->decrementSizeStored($total_size)) {
+				$size_stored = $this->redis->get('token:'.$this->_token.':size_stored');
+				if($size_stored !== null) {
+					$this->redis->set('token:'.$this->_token.':size_stored', intval($size_stored)-$total_size);
+				}
+			}
+		}
+        // Update folders size
+        foreach($tab_folders as $folder => $infos) {
+            $this->_modelFolders->updateFoldersSize($folder, -1*$infos[1]);
+		}
+		return true;
     }
 
 	private function rmFolders($folders) {
-        $total_size = 0;
-        $tab_folders = []; // key : folder id, value : updated size
-        $path = '';
-// ids : parent folder id, folders : folder id
-        if(isset($_POST['folders']) && isset($_POST['ids'])) {
-            $folders = explode("|", urldecode($_POST['folders']));
-            $ids = explode("|", urldecode($_POST['ids']));
+		$total_size = 0;
+		$tab_folders = []; // key: folder id (parent), value: updated size
+		$removed_folders = [];
 
-            $nbFolders = count($folders);
-            $nbIds = count($ids);
-
-            if($nbFolders === $nbIds && $nbFolders > 0) {
-                for($i = 0; $i < $nbFolders; $i++) {
-                    $folder_id = $ids[$i];
-                    if(!array_key_exists($folder_id, $tab_folders)) $tab_folders[$folder_id] = 0;
-                    $size = $this->rmFolder($folders[$i]);
-                    $total_size += $size;
-                    $tab_folders[$folder_id] += $size;
-                }
-
-                // Decrement storage counter
-                $this->_modelStorage = new m\Storage($this->_uid);
-                if($this->_modelStorage->decrementSizeStored($total_size)) {
-					$_SESSION['size_stored'] -= $total_size;
+		foreach($folders as $folder) {
+			if(isset($folder->id) && isset($folder->parent) && is_pos_digit($folder->id) && is_pos_digit($folder->parent)) {
+				if(in_array(intval($folder->id), $removed_folders)) {
+					continue; // Already removed
 				}
-
-                // Update folders size
-                foreach($tab_folders as $key => $val) {
-                    $this->_modelFolders->updateFoldersSize($key, -1*$val);
+				if(!array_key_exists(intval($folder->parent), $tab_folders)) {
+					$tab_folders[intval($folder->parent)] = 0;
 				}
-            }
-        }
-        echo 'done';
+				$size = $this->rmFolder($folder->id);
+				$removed_folders[] = intval($folder->id);
+				if(is_pos_digit($size)) {
+					$total_size += $size;
+					$tab_folders[intval($folder->parent)] += $size;
+				}
+			}
+		}
+		// Decrement storage counter
+		if($total_size > 0) {
+			$this->_modelStorage = new m\Storage($this->_uid);
+			if($this->_modelStorage->decrementSizeStored($total_size)) {
+				$size_stored = $this->redis->get('token:'.$this->_token.':size_stored');
+				if($size_stored !== null) {
+					$this->redis->set('token:'.$this->_token.':size_stored', intval($size_stored)-$total_size);
+				}
+			}
+		}
+		// Update folders size
+		foreach($tab_folders as $folder => $removed_size) {
+			$this->_modelFolders->updateFoldersSize($folder, -1*$removed_size);
+		}
+		return true;
     }
 
 	private function rmFile($id, $path, $folder_id) {
