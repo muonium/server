@@ -23,7 +23,7 @@ class Storage extends l\Model {
 
     function incrementSizeStored($i) {
 		// i (int) - Increment the size stored of $i B
-		// $_SESSION['size_stored'] is incremented in the controller
+		// size_stored is incremented in the controller
 		if($this->id_user === null || !is_numeric($i)) return false;
         $req = self::$_sql->prepare("UPDATE storage SET size_stored = size_stored+? WHERE id_user = ?");
         return $req->execute([$i, $this->id_user]);
@@ -37,7 +37,7 @@ class Storage extends l\Model {
 
     function updateSizeStored($i) {
 		// i (int) - Set the size stored to $i B
-		// $_SESSION['size_stored'] is set in the controller
+		// size_stored is set in the controller
 		if($this->id_user === null || !is_numeric($i) || $i < 0) return false;
         $req = self::$_sql->prepare("UPDATE storage SET size_stored = ? WHERE id_user = ?");
         return $req->execute([$i, $this->id_user]);
@@ -56,7 +56,7 @@ class Storage extends l\Model {
 
     function getUserQuota() {
 		// Returns user quota
-		// $_SESSION['size_stored'] is set in the controller
+		// size_stored is set in the controller
 		if($this->id_user === null) return false;
         $req = self::$_sql->prepare("SELECT user_quota FROM storage WHERE id_user = ?");
         $req->execute([$this->id_user]);
@@ -67,7 +67,7 @@ class Storage extends l\Model {
 
     function getSizeStored() {
 		// Returns size stored
-		// $_SESSION['size_stored'] is set in the controller
+		// size_stored is set in the controller
 		if($this->id_user === null) return false;
         $req = self::$_sql->prepare("SELECT size_stored FROM storage WHERE id_user = ?");
         $req->execute([$this->id_user]);

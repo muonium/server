@@ -100,7 +100,7 @@ class rm extends c\FileManager {
 				}
 				$size = $this->rmFolder($folder->id);
 				$removed_folders[] = intval($folder->id);
-				if(is_pos_digit($size)) {
+				if(is_numeric($size) && floatval($size) > 0) {
 					$total_size += $size;
 					$tab_folders[intval($folder->parent)] += $size;
 				}

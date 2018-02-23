@@ -23,7 +23,7 @@ class files extends c\FileManager {
 			$data_length = strlen($data);
 			$user_quota = $redis->get('token:'.$this->_token.':user_quota');
 			$size_stored = $redis->get('token:'.$this->_token.':size_stored');
-			if($user_quota === null || $size_stored === null || $size_stored+$data_length > $user_quota) {
+			if($user_quota === null || $size_stored === null || intval($size_stored)+$data_length > intval($user_quota)) {
 				return $resp;
 			}
 			$f = @fopen($fpath, 'a');
@@ -32,7 +32,7 @@ class files extends c\FileManager {
 			}
 			$storage = new m\Storage($this->_uid);
 			if($storage->incrementSizeStored($data_length)) {
-				$size_stored += $data_length;
+				$size_stored = intval($size_stored)+$data_length;
 				$redis->set('token:'.$this->_token.':size_stored', $size_stored);
 			}
 			fclose($f);
@@ -44,11 +44,11 @@ class files extends c\FileManager {
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
-		elseif(isset($data->data) && isset($data->filename) && isset($data->folder_id) && is_numeric($data->folder_id)) {
+		elseif(isset($data->data) && isset($data->filename) && isset($data->folder_id) && is_pos_digit($data->folder_id)) {
 			$cnt = $data->data;
 			if($cnt !== 'EOF') $cnt .= "\r\n";
 		    $filename = $this->parseFilename($data->filename);
-			$folder_id = $data->folder_id;
+			$folder_id = intval($data->folder_id);
 
 			if($filename !== false) {
 				$fp = $this->redis->get('token:'.$this->_token.':folder:'.$folder_id);
@@ -128,7 +128,7 @@ class files extends c\FileManager {
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
-		elseif(isset($data->filename) && isset($data->line) && is_numeric($data->line) && isset($data->folder_id) && is_numeric($data->folder_id)) {
+		elseif(isset($data->filename) && isset($data->line) && is_pos_digit($data->line) && isset($data->folder_id) && is_pos_digit($data->folder_id)) {
 		    $filename = $this->parseFilename($data->filename);
 			if($filename !== false) {
 				$path = $this->getUploadFolderPath(intval($data->folder_id));
@@ -167,7 +167,7 @@ class files extends c\FileManager {
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
-		elseif(isset($_data->filename) && isset($data->folder_id) && is_numeric($data->folder_id)) {
+		elseif(isset($_data->filename) && isset($data->folder_id) && is_pos_digit($data->folder_id)) {
 			$resp['data'] = 0;
 			$filename = $this->parseFilename($data->filename);
 			if($filename !== false) {
@@ -214,23 +214,23 @@ class files extends c\FileManager {
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
-		elseif(isset($data->filesize) && isset($data->filename) && isset($data->folder_id) && is_numeric($data->folder_id) && is_numeric($data->filesize)) {
+		elseif(isset($data->filesize) && isset($data->filename) && isset($data->folder_id) && is_pos_digit($data->folder_id) && is_digit($data->filesize)) {
 			// size_stored_tmp includes files currently uploading (new session variable because we can't trust a value sent by the client)
 			// Used only to compare, if user sent a fake value, it will start uploading process but it will stop in the first chunk because we update size_stored for every chunk
 			$user_quota = $redis->get('token:'.$this->_token.':user_quota');
 			$size_stored = $redis->get('token:'.$this->_token.':size_stored');
 			$size_stored_tmp = $redis->get('token:'.$this->_token.':size_stored_tmp');
 			$filename = $this->parseFilename($data->filename);
-			if($size_stored !== null && $filename !== false) {
+			if($size_stored !== null && $user_quota !== null && $filename !== false) {
 				if($size_stored_tmp === null) {
-					$size_stored_tmp = $size_stored;
+					$size_stored_tmp = intval($size_stored);
 					$redis->set('token:'.$this->_token.':size_stored_tmp', $size_stored_tmp);
 				}
 
-				if($size_stored_tmp + $data->filesize <= $user_quota) {
+				if(intval($size_stored_tmp)+intval($data->filesize) <= intval($user_quota)) {
 					$resp['code'] = 200;
 					$resp['status'] = 'success';
-					$size_stored_tmp += $data->filesize;
+					$size_stored_tmp = intval($size_stored_tmp)+intval($data->filesize);
 					$redis->set('token:'.$this->_token.':size_stored_tmp', $size_stored_tmp);
 					$path = $this->getUploadFolderPath(intval($data->folder_id));
 					if($path !== false) {
@@ -306,7 +306,7 @@ class files extends c\FileManager {
 
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
-		} elseif(isset($data->id) && is_numeric($data->id)) {
+		} elseif(isset($data->id) && is_pos_digit($data->id)) {
 			$resp['code'] = 200;
 			$resp['status'] = 'success';
 			$this->_modelFiles = new m\Files($this->_uid);

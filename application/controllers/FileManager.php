@@ -45,7 +45,7 @@ class FileManager extends l\Controller {
 			$this->_folderId = 0;
 		} else {
 			$folder_id = urldecode($data->folder_id);
-			if(!is_numeric($folder_id)) return false;
+			if(!is_pos_digit($folder_id)) return false;
 			$path = $this->_modelFolders->getPath($folder_id);
 			if($path === false) return false;
 			$path .= $this->_modelFolders->getFoldername($folder_id);

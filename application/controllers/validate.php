@@ -31,8 +31,8 @@ class validate extends l\Controller {
 				$data->key = $key;
 			}
 
-			if(isset($data->uid) && isset($data->key) && is_numeric($data->uid) && strlen($data->key) >= 128) {
-	            $this->uid = $data->uid;
+			if(isset($data->uid) && isset($data->key) && is_pos_digit($data->uid) && strlen($data->key) >= 128) {
+	            $this->uid = intval($data->uid);
 	            $this->val_key = $data->key;
 	            $this->_modelUserVal = new m\UserValidation($this->uid);
 
@@ -70,8 +70,8 @@ class validate extends l\Controller {
 		}
 		elseif($this->isLogged() === false) {
             sleep(2);
-			if(isset($data->uid) && is_numeric($data->uid)) {
-				$this->uid = $uid;
+			if(isset($data->uid) && is_pos_digit($data->uid)) {
+				$this->uid = intval($data->uid);
                 $this->_modelUserVal = new m\UserValidation($this->uid);
                 if($this->_modelUserVal->getKey()) {
 					$this->_modelUser = new m\Users($this->uid);

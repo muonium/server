@@ -22,7 +22,7 @@ class Ban extends l\Model {
 	}
 
 	function deleteBan() {
-        if(isset($this->id_user) && is_numeric($this->id_user)) {
+        if(isset($this->id_user) && is_pos_digit($this->id_user)) {
             $req = self::$_sql->prepare("DELETE FROM ban WHERE id_user = ?");
             return $req->execute([$this->id_user]);
         }

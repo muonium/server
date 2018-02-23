@@ -33,7 +33,7 @@ class mv extends c\FileManager {
 		    } elseif($data->old_folder_id == 0) {
 		        $old_folder_id = 0;
 		        $old_path = '';
-		    } elseif(is_numeric($data->old_folder_id)) {
+		    } elseif(is_pos_digit($data->old_folder_id)) {
 		        $old_folder_id = intval($data->old_folder_id);
 		        $old_path = $this->_modelFolders->getPath($old_folder_id);
 		        if($old_path !== false) {
@@ -41,7 +41,7 @@ class mv extends c\FileManager {
 				}
 		    }
 
-			if(isset($old_folder_id) && isset($old_path) && is_numeric($old_folder_id) && $old_path !== false) {
+			if(isset($old_folder_id) && isset($old_path) && is_pos_digit($old_folder_id) && $old_path !== false) {
 				$resp['data']['warning'] = [];
 				$this->_modelStorage = new m\Storage($this->_uid);
 		        $quota = $this->_modelStorage->getUserQuota();
@@ -58,7 +58,7 @@ class mv extends c\FileManager {
 			                    // Cut and paste files
 			                    //
 			                    foreach($data->files as $file) {
-			                        if(is_numeric($file)) {
+			                        if(is_pos_digit($file)) {
 										$filename = $this->_modelFiles->getFilename($file);
 			                            if($filename === false) {
 											$resp['data']['warning'][] = 'badFilename';
@@ -94,7 +94,7 @@ class mv extends c\FileManager {
 			                    // Copy and paste files
 			                    //
 			                    foreach($data->files as $file) {
-			                        if(is_numeric($file)) {
+			                        if(is_pos_digit($file)) {
 										$filename = $this->_modelFiles->getFilename($file);
 			                            if($filename === false) {
 											$resp['data']['warning'][] = 'badFilename';
@@ -252,7 +252,7 @@ class mv extends c\FileManager {
                     $first_pos = strrpos($name, '(');
 					$last_pos = strrpos($name, ')');
 					if($first_pos === false || $last_pos === false || $first_pos >= $last_pos) return false;
-					if(!is_numeric(substr($name, $first_pos+1, $last_pos-$first_pos-1))) return false;
+					if(!is_pos_digit(substr($name, $first_pos+1, $last_pos-$first_pos-1))) return false;
 					$name = substr($name, 0, $first_pos)."($i)";
 					$length = strlen($name);
 					if($length > 64) { // max folder length 64 chars
@@ -270,7 +270,7 @@ class mv extends c\FileManager {
                     $first_pos = strrpos($name, '(');
                     $last_pos = strrpos($name, ')');
                     if($first_pos === false || $last_pos === false || $first_pos >= $last_pos) return false;
-					if(!is_numeric(substr($name, $first_pos+1, $last_pos-$first_pos-1))) return false;
+					if(!is_pos_digit(substr($name, $first_pos+1, $last_pos-$first_pos-1))) return false;
 					$old_name = $name;
                     $name = substr($name, 0, $first_pos)."($i)".substr($name, $last_pos+1);
 					$length = strlen($name);

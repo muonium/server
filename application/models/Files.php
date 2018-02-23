@@ -66,7 +66,7 @@ class Files extends l\Model {
 		// Returns filename, or false if it doesn't exist
 		if($this->id_owner === null) return false;
 		$id = ($id === null) ? $this->id : $id;
-		if(!is_numeric($id)) return false;
+		if(!is_pos_digit($id)) return false;
         $req = self::$_sql->prepare("SELECT name FROM files WHERE id_owner = ? AND id = ?");
         $req->execute([$this->id_owner, $id]);
         if($req->rowCount() === 0) return false;
@@ -79,7 +79,7 @@ class Files extends l\Model {
 		// Returns folder id of the file, or false if it doesn't exist
 		if($this->id_owner === null) return false;
 		$id = ($id === null) ? $this->id : $id;
-		if(!is_numeric($id)) return false;
+		if(!is_pos_digit($id)) return false;
         $req = self::$_sql->prepare("SELECT folder_id FROM files WHERE id_owner = ? AND id = ?");
         $req->execute([$this->id_owner, $id]);
         if($req->rowCount() === 0) return false;
@@ -91,7 +91,7 @@ class Files extends l\Model {
 		// id (int) - File id
 		// Returns folder id of the file, or false if it doesn't exist
 		$id = ($id === null) ? $this->id : $id;
-		if(!is_numeric($id)) return false;
+		if(!is_pos_digit($id)) return false;
         $req = self::$_sql->prepare("SELECT folder_id FROM files WHERE id = ?");
         $req->execute([$id]);
         if($req->rowCount() === 0) return false;
@@ -109,7 +109,7 @@ class Files extends l\Model {
         }
 		else {
 			$id = ($id === null) ? $this->id : $id;
-			if(!is_numeric($id)) return 0;
+			if(!is_pos_digit($id)) return 0;
         	$req = self::$_sql->prepare("SELECT size FROM files WHERE id_owner = ? AND id = ?");
         	$req->execute([$this->id_owner, $id]);
 		}
@@ -273,7 +273,7 @@ class Files extends l\Model {
     function getFullPath($id) {
         // Used for download feature
 		// id - File id (int)
-		if($this->id_owner === null || !is_numeric($id)) return false;
+		if($this->id_owner === null || !is_pos_digit($id)) return false;
         $folder_id = $this->getFolderId($id);
         if($folder_id === false) return false;
         if($folder_id !== 0) {

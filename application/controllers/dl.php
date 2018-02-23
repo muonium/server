@@ -27,7 +27,7 @@ class dl extends l\Controller {
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
-		elseif(isset($data->uid) && is_numeric($data->uid) && isset($data->filename) && isset($data->folder_id) && is_numeric($data->folder_id) && isset($data->line) && is_numeric($data->line)) {
+		elseif(isset($data->uid) && is_pos_digit($data->uid) && isset($data->filename) && isset($data->folder_id) && is_pos_digit($data->folder_id) && isset($data->line) && is_pos_digit($data->line)) {
 			$this->sharerID = $data->uid;
 			$filename = $this->parseFilename($data->filename);
 			if($filename !== false) {
@@ -65,7 +65,7 @@ class dl extends l\Controller {
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
-		elseif(isset($data->uid) && is_numeric($data->uid) && isset($data->filename) && isset($data->folder_id) && is_numeric($data->folder_id)) {
+		elseif(isset($data->uid) && is_pos_digit($data->uid) && isset($data->filename) && isset($data->folder_id) && is_pos_digit($data->folder_id)) {
 			$resp['data'] = 0;
 			$this->sharerID = $data->uid;
 		    $filename = $this->parseFilename($data->filename);
@@ -114,7 +114,7 @@ class dl extends l\Controller {
 		}
 		elseif(is_array($data) && count($data) > 0) {
 			$fid = getFileId(key($data));
-			if(is_numeric($fid)) {
+			if(is_pos_digit($fid)) {
 				$this->_modelFiles = new m\Files();
 				$infos = $this->_modelFiles->getInfos($fid);
 				if($infos !== false) {
@@ -140,7 +140,7 @@ class dl extends l\Controller {
 	}
 
 	private function getUploadFolderPath($folder_id) {
-		if($this->sharerID === null || !is_numeric($this->sharerID) || $this->filename === null) return false;
+		if($this->sharerID === null || !is_pos_digit($this->sharerID) || $this->filename === null) return false;
 		// Check if the file is shared
 		$this->_modelFiles = new m\Files($this->sharerID);
 		if(!($this->_modelFiles->isShared($this->filename, $folder_id))) return false;

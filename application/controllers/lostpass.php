@@ -33,8 +33,8 @@ class lostpass extends l\Controller {
 				$data->key = $key;
 			}
 
-			if(isset($data->uid) && isset($data->key) && is_numeric($data->uid) && strlen($data->key) >= 128) {
-        		$this->uid = $data->uid;
+			if(isset($data->uid) && isset($data->key) && is_pos_digit($data->uid) && strlen($data->key) >= 128) {
+        		$this->uid = intval($data->uid);
         		$this->val_key = $data->key;
         		$this->_modelUserLostPass = new m\UserLostPass($this->uid);
 
@@ -69,8 +69,8 @@ class lostpass extends l\Controller {
 		}
 		elseif($this->isLogged() === false) {
         	sleep(2);
-			if(isset($data->uid) && is_numeric($data->uid)) {
-            	$this->uid = $uid;
+			if(isset($data->uid) && is_pos_digit($data->uid)) {
+            	$this->uid = intval($data->uid);
                 $this->_modelUser = new m\Users($this->uid);
 				if($user_mail = $this->_modelUser->getEmail()) {
 					$resp['code'] = 200;
@@ -120,7 +120,7 @@ class lostpass extends l\Controller {
 			$resp['code'] = 405; // Method Not Allowed
 		}
 		elseif($this->isLogged() === false) {
-			if(isset($data->uid) && isset($data->key) && is_numeric($data->uid) && strlen($data->key) >= 128 && isset($data->password)) {
+			if(isset($data->uid) && isset($data->key) && is_pos_digit($data->uid) && strlen($data->key) >= 128 && isset($data->password)) {
 				$this->_modelUserLostPass = new m\UserLostPass($data->uid);
 				if($key = $this->_modelUserLostPass->getKey()) {
 					if($key === $data->key && $this->_modelUserLostPass->getExpire() >= time()) {

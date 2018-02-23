@@ -39,7 +39,7 @@ class IPN extends l\Controller {
 					if(hash_equals($hmac, $_SERVER['HTTP_HMAC'])) {
 						$ipn_mode 	= 	isset($data['ipn_mode']) 								? $data['ipn_mode'] 			: null;
 						$product_id = 	isset($data['item_number']) 							? $data['item_number'] 			: null;
-						$user_id 	= 	isset($data['custom']) && is_numeric($data['custom']) 	? intval($data['custom']) 		: 0;
+						$user_id 	= 	isset($data['custom']) && is_pos_digit($data['custom']) ? intval($data['custom']) 		: 0;
 						$txn_id 	= 	isset($data['txn_id']) 									? $data['txn_id'] 				: null;
 						$status 	= 	isset($data['status']) && is_numeric($data['status']) 	? intval($data['status']) 		: 0;
 						$currency1 	= 	isset($data['currency1']) 								? $data['currency1'] 			: null;
