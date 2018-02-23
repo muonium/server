@@ -17,28 +17,33 @@ class share extends c\FileManager {
 		$method = h\httpMethodsData::getMethod();
 		$data = h\httpMethodsData::getValues();
 		$resp['token'] = $this->_token;
-	}
 
-	public function shareFileAction() {
-		if(isset($_POST['id']) && is_numeric($_POST['id']) && isset($_POST['dk'])) {
-			$file_id = intval($_POST['id']);
-			$this->_modelFiles = new m\Files($_SESSION['id']);
-			if($this->_modelFiles->setDK($file_id, $_POST['dk'])) {
-				echo URL_APP.'/dl/?'.setURL($file_id);
-				exit;
+		if($method === 'post') {
+			if(isset($data->id) && is_pos_digit($data->id) && isset($data->dk)) {
+				$this->_modelFiles = new m\Files($this->_uid);
+				if($this->_modelFiles->setDK(intval($data->id), $data->dk)) {
+					$resp['code'] = 200;
+					$resp['status'] = 'success';
+					$resp['data'] = URL_APP.'/dl/?'.setURL(intval($data->id));
+				}
+			} else {
+				$resp['message'] = 'emptyField';
 			}
+		} elseif($method === 'delete') {
+			if(isset($data->id) && is_pos_digit($data->id)) {
+				$this->_modelFiles = new m\Files($this->_uid);
+				if($this->_modelFiles->setDK(intval($data->id), null)) {
+					$resp['code'] = 200;
+					$resp['status'] = 'success';
+				}
+			} else {
+				$resp['message'] = 'emptyField';
+			}
+		} else {
+			$resp['code'] = 405; // Method Not Allowed
 		}
-		echo 'err';
-	}
 
-	public function unshareFileAction() {
-		if(isset($_POST['id']) && is_numeric($_POST['id'])) {
-			$this->_modelFiles = new m\Files($_SESSION['id']);
-			if($this->_modelFiles->setDK(intval($_POST['id']), null)) {
-				echo 'ok';
-				exit;
-			}
-		}
-		echo 'err';
+		http_response_code($resp['code']);
+		echo json_encode($resp);
 	}
 }
