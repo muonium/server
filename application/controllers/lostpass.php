@@ -11,11 +11,11 @@ class lostpass extends l\Controller {
     private $_modelUser;
     private $_modelUserLostPass;
     private $_mail;
-
-    private $ppCounter = 0;
+    private $redis = null;
 
     function __construct() {
         parent::__construct();
+		$this->redis = $this->getRedis();
     }
 
     public function keyAction($uid = null, $key = null) {
@@ -90,7 +90,7 @@ class lostpass extends l\Controller {
 					}
 
                 	$this->_mail = new l\Mail();
-					$this->_mail->delay(60, $this->uid, $this->getRedis(), 'lostpass');
+					$this->_mail->delay(60, $this->uid, $this->redis, 'lostpass');
                 	$this->_mail->_to = $user_mail;
                 	$this->_mail->_subject = self::$txt->LostPass->subject;
 	                $this->_mail->_message = str_replace(

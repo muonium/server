@@ -50,7 +50,7 @@ class FileManager extends l\Controller {
 			if($path === false) return false;
 			$path .= $this->_modelFolders->getFoldername($folder_id);
 			$this->_path = $path.'/';
-			$this->_folderId = $folder_id;
+			$this->_folderId = intval($folder_id);
 		}
 		return true;
 	}

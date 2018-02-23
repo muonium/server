@@ -92,18 +92,6 @@ class Controller {
 		return true;
 	}
 
-    // Returns a language selector (select)
-    public static function getLanguageSelector() {
-        $html = '
-			<select onchange="changeLanguage(this.value)">';
-        foreach(self::$languages as $iso => $lang) {
-            $html .= '
-				<option value="'.$iso.'"'.($iso == self::$userLanguage ? ' selected': '').'>'.$lang.'</option>';
-        }
-        $html .= '</select>';
-		return $html;
-    }
-
 	public function isLogged() {
 		/* A "high level" method to check the validity of token, set _uid and _token and return true if the user is logged or false.
 		   Inside controllers, it's the equivalent of parent::__construct(['mustBeLogged' => true]); for constructors but it can be used inside methods

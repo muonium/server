@@ -28,7 +28,7 @@ class dl extends l\Controller {
 			$resp['code'] = 405; // Method Not Allowed
 		}
 		elseif(isset($data->uid) && is_pos_digit($data->uid) && isset($data->filename) && isset($data->folder_id) && is_pos_digit($data->folder_id) && isset($data->line) && is_pos_digit($data->line)) {
-			$this->sharerID = $data->uid;
+			$this->sharerID = intval($data->uid);
 			$filename = $this->parseFilename($data->filename);
 			if($filename !== false) {
 				$this->filename = $filename;
@@ -38,7 +38,7 @@ class dl extends l\Controller {
 					$resp['status'] = 'success';
 					$filepath = NOVA.'/'.$this->sharerID.'/'.$path.$filename;
 					$file = new \SplFileObject($filepath, 'r');
-				    $file->seek($data->line);
+				    $file->seek(intval($data->line));
 				    $resp['data'] = str_replace("\r\n", "", $file->current());
 				} else {
 					$resp['message'] = 'notExists';
@@ -67,7 +67,7 @@ class dl extends l\Controller {
 		}
 		elseif(isset($data->uid) && is_pos_digit($data->uid) && isset($data->filename) && isset($data->folder_id) && is_pos_digit($data->folder_id)) {
 			$resp['data'] = 0;
-			$this->sharerID = $data->uid;
+			$this->sharerID = intval($data->uid);
 		    $filename = $this->parseFilename($data->filename);
 			if($filename !== false) {
 				$this->filename = $filename;

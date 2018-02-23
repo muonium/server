@@ -76,7 +76,7 @@ class mv extends c\FileManager {
 												$this->redis->del('token:'.$this->_token.':folder:'.$old_folder_id.':'.$filename);
 											}
 			                                if(rename(NOVA.'/'.$this->_uid.'/'.$old_path.$filename, NOVA.'/'.$this->_uid.'/'.$this->_path.$dst_filename)) {
-				                                $this->_modelFiles->id = $file;
+				                                $this->_modelFiles->id = intval($file);
 				                                $this->_modelFiles->name = $dst_filename;
 				                                $uploaded += filesize(NOVA.'/'.$this->_uid.'/'.$this->_path.$dst_filename);
 				                                $this->_modelFiles->updateDir();
@@ -101,7 +101,7 @@ class mv extends c\FileManager {
 											continue;
 										}
 			                            if(file_exists(NOVA.'/'.$this->_uid.'/'.$old_path.$filename)) {
-			                                $this->_modelFiles->id = $file;
+			                                $this->_modelFiles->id = intval($file);
 			                                $this->_modelFiles->size = filesize(NOVA.'/'.$this->_uid.'/'.$old_path.$filename);
 			                                if($stored+$this->_modelFiles->size < $quota) {
 												// Files copies support

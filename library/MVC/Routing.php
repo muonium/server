@@ -12,7 +12,7 @@ class Routing {
 	];
 
 	public static function getInstance() {
-		if (!isset(self::$instance)) {
+		if(!isset(self::$instance)) {
 			$c = __CLASS__;
 			self::$instance = new $c;
 		}
@@ -29,7 +29,7 @@ class Routing {
 		// Number of arguments
 		$nb_args = count($arguments);
 
-		if($nb_args == 0) { // No arguments, we'll display default page
+		if($nb_args === 0) { // No arguments, we'll display default page
 			$_controller = DEFAULT_CONTROLLER;
 			$_method = DEFAULT_FUNCTION;
 		}
@@ -49,6 +49,7 @@ class Routing {
 				$_method = $arguments[1].'Action';
 				if($nb_args > 2) {
                     // If there are more arguments, then these are the parameters
+					$params = [];
 					for($i = 2; $i < $nb_args; $i++) {
 						$params[$i-2] = $arguments[$i];
 					}
@@ -56,19 +57,18 @@ class Routing {
 			}
 		}
 
-		if (!file_exists(DIR_CLASS.'/'.$_controller.'.php')) {
+		if(!file_exists(DIR_CLASS.'/'.$_controller.'.php')) {
             // Error : Controller doesn't exists
 			header("Content-type: application/json");
 			$this->resp['code'] = 404;
 			http_response_code($this->resp['code']);
 			exit(json_encode($this->resp));
-		}
-		else {
+		} else {
 			require_once(DIR_CLASS.'/'.$_controller.'.php');
 		}
         $c = '\application\controllers\\'.$_controller;
 
-		if (!class_exists($c)) {
+		if(!class_exists($c)) {
             // Error : Class doesn't exists
 			header("Content-type: application/json");
 			$this->resp['code'] = 404;
@@ -78,9 +78,8 @@ class Routing {
 		else {
             // Call the controller
 			$_class = new $c();
-
             // Call a method ?
-			if(!empty($_method)) {
+			if(isset($_method)) {
 				if(!method_exists($_class, $_method)) {
                     // Error : Method doesn't exists
 					header("Content-type: application/json");
@@ -90,7 +89,7 @@ class Routing {
 				}
 				else {
                     // Are there parameters ?
-					if(!empty($params)) {
+					if(isset($params) && is_array($params)) {
 						$nb_params = count($params);
 						$r = new \ReflectionMethod($_class, $_method);
 
@@ -100,8 +99,7 @@ class Routing {
 							$this->resp['code'] = 404;
 							http_response_code($this->resp['code']);
 							exit(json_encode($this->resp));
-						}
-						else {
+						} else {
 							call_user_func_array([$_class, $_method], $params);
                         }
 					}
@@ -113,8 +111,7 @@ class Routing {
 							$this->resp['code'] = 404;
 							http_response_code($this->resp['code']);
 							exit(json_encode($this->resp));
-						}
-						else {
+						} else {
 							$_class->$_method();
 						}
 					}

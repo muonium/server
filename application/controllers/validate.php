@@ -11,9 +11,11 @@ class validate extends l\Controller {
     private $_modelUser;
     private $_modelUserVal;
     private $_mail;
+	private $redis;
 
 	function __construct() {
 		parent::__construct();
+		$this->redis = $this->getRedis();
 	}
 
 	public function keyAction($uid = null, $key = null) {
@@ -85,7 +87,7 @@ class validate extends l\Controller {
 	                    $this->_modelUserVal->Update();
 
 	                    $this->_mail = new l\Mail();
-						$this->_mail->delay(60, $this->uid, $this->getRedis(), 'validate');
+						$this->_mail->delay(60, $this->uid, $this->redis, 'validate');
 	                    $this->_mail->_to = $user_mail;
 	                    $this->_mail->_subject = self::$txt->Register->subject;
 	                    $this->_mail->_message = str_replace(

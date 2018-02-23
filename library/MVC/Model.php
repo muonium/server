@@ -4,7 +4,6 @@ use \config as conf;
 
 // This class is called by all models (with "extends")
 class Model {
-
     protected static $_sql;
 
     function __construct() {
@@ -14,14 +13,14 @@ class Model {
     }
 
     public static function getInstance() {
-        if (!isset(self::$_sql)) {
+        if(!isset(self::$_sql)) {
             $c = __CLASS__;
             self::$_sql = new $c;
         }
         return self::$_sql;
     }
 
-    function getLastInsertedId() {
+    public function getLastInsertedId() {
         return self::$_sql->lastInsertId();
     }
 
