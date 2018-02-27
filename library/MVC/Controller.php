@@ -48,18 +48,17 @@ class Controller {
         if(is_array($tab)) {
 			// Authentication middleware
             if(array_key_exists('mustBeLogged', $tab) && $tab['mustBeLogged'] === true) {
-				if($this->isLogged()) {
-					return true;
+				if($this->isLogged() === false) {
+					// Not authorized
+					header("Content-type: application/json");
+					$resp['code'] = 401;
+					http_response_code($resp['code']);
+					exit(json_encode($resp));
 				}
-				// Not authorized
-				header("Content-type: application/json");
-				$resp['code'] = 401;
-				http_response_code($resp['code']);
-				exit(json_encode($resp));
             }
         }
         // Get user language
-		$lang = !empty($_COOKIE['lang']) ? htmlentities($_COOKIE['lang']) : DEFAULT_LANGUAGE;
+		$lang = !empty($_COOKIE['lang']) ? htmlspecialchars($_COOKIE['lang']) : DEFAULT_LANGUAGE;
         self::loadLanguage($lang);
     }
 

@@ -40,7 +40,7 @@ class lostpass extends l\Controller {
 
 		        if($key = $this->_modelUserLostPass->getKey()) { // Found key
 			        if($key === $this->val_key && $this->_modelUserLostPass->getExpire() >= time()) {
-						// Same keys, redirect and show form to change password or passphrase
+						// Same keys
 						$resp['code'] = 200;
 						$resp['status'] = 'success';
 						$resp['message'] = 'ok';
@@ -95,7 +95,7 @@ class lostpass extends l\Controller {
                 	$this->_mail->_subject = self::$txt->LostPass->subject;
 	                $this->_mail->_message = str_replace(
 	                    ["[id_user]", "[key]", "[url_app]"],
-	                    [$uid, $key, URL_APP],
+	                    [$this->uid, $key, URL_APP],
 	                    self::$txt->LostPass->message
 	                );
 

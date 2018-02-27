@@ -1,14 +1,13 @@
 <?php
 // This file is always called
 use \library\MVC as l;
-//
-session_start();
+
 require_once("./vendor/autoload.php");
 
 // Defines
 
 // Mui Version
-define('VERSION', '2018.02.12.0');
+define('VERSION', '2018.02.27.0');
 
 define('DS', DIRECTORY_SEPARATOR);
 define('ROOT', __DIR__);
@@ -28,15 +27,7 @@ define('DIR_VIEW',  ROOT.'/application/views/');
 define('DEFAULT_LANGUAGE', 'en');
 define('DIR_LANGUAGE', ROOT.'/public/translations/');
 
-// Functions
+require_once("./library/MVC/Functions.php");
 
-function echo_h($str) {
-    echo htmlentities($str, ENT_QUOTES);
-}
-
-require_once("library/MVC/Functions.php");
-/* ROUTING */
 $_routing = l\Routing::getInstance();
 $_routing->route();
-//
-?>

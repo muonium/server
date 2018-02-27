@@ -154,7 +154,7 @@ class user extends l\Controller {
 			$resp['token'] = $this->_token;
 	        $this->_modelUser = new m\Users($this->_uid);
 	        $s = 0;
-	        if(isset($data->doubleAuth) && $data->doubleAuth == 'true') {
+	        if(isset($data->doubleAuth) && ($data->doubleAuth === true || $data->doubleAuth == 'true')) {
 				$s = 1;
 			}
 	        if($this->_modelUser->updateDoubleAuth($s)) {
@@ -221,6 +221,7 @@ class user extends l\Controller {
 		$this->_modelUser = new m\Users($this->_uid);
 		$infos = $this->_modelUser->getInfos();
 		if($infos !== false) {
+			$infos['double_auth'] = $infos['double_auth'] == 1 ? true : false;
 			$resp['code'] = 200;
 			$resp['status'] = 'success';
 			$resp['data'] = $infos;
@@ -245,7 +246,7 @@ class user extends l\Controller {
 
 					if(!($this->_modelUser->EmailExists())) {
 						if(!($this->_modelUser->LoginExists())) {
-							if(isset($data->doubleAuth) && $data->doubleAuth == 'true') {
+							if(isset($data->doubleAuth) && ($data->doubleAuth === true || $data->doubleAuth == 'true')) {
 								$this->_modelUser->setDoubleAuth(1);
 							}
 

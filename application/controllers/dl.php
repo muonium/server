@@ -73,7 +73,7 @@ class dl extends l\Controller {
 				$this->filename = $filename;
 				$path = $this->getUploadFolderPath(intval($data->folder_id));
 				if($path !== false) {
-					$filepath = NOVA.'/'.$sharerID.'/'.$path.$filename;
+					$filepath = NOVA.'/'.$this->sharerID.'/'.$path.$filename;
 				    if(file_exists($filepath)) {
 						$resp['code'] = 200;
 						$resp['status'] = 'success';
