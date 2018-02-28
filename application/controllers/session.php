@@ -136,7 +136,7 @@ class session extends l\Controller {
                             else { // Logged
 								$resp['token'] = $this->buildToken($id);
 							}
-                            $resp['data']['cek'] = $cek; //the CEK is already url encoded in the database
+                            $resp['data']['cek'] = $cek; // the CEK is already url encoded in the database
                         }
                         else {
                             // Key found - User needs to validate its account (double auth only for validated accounts)
