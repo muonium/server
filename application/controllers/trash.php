@@ -16,14 +16,16 @@ class trash extends l\Controller {
 		$data = h\httpMethodsData::getValues();
         $trash = $toTrash ? 1 : 0;
 
-        if(isset($data->files) && is_array($data->files)) {
+        if(isset($data->files) && is_array($data->files) && count($data->files) > 0) {
+			$data->files = array_unique($data->files);
 			$this->_modelFiles = new m\Files($this->_uid);
             foreach($data->files as $file) {
                 if(is_pos_digit($file)) $this->_modelFiles->updateTrash($file, $trash);
             }
         }
 
-        if(isset($data->folders) && is_array($data->folders)) {
+        if(isset($data->folders) && is_array($data->folders) && count($data->folders) > 0) {
+			$data->folders = array_unique($data->folders);
 			$this->_modelFolders = new m\Folders($this->_uid);
             foreach($data->folders as $folder) {
                 if(is_pos_digit($folder)) $this->_modelFolders->updateTrash($folder, $trash);

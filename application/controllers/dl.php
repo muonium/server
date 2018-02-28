@@ -34,12 +34,16 @@ class dl extends l\Controller {
 				$this->filename = $filename;
 				$path = $this->getUploadFolderPath(intval($data->folder_id));
 				if($path !== false) {
-					$resp['code'] = 200;
-					$resp['status'] = 'success';
 					$filepath = NOVA.'/'.$this->sharerID.'/'.$path.$filename;
-					$file = new \SplFileObject($filepath, 'r');
-				    $file->seek(intval($data->line));
-				    $resp['data'] = str_replace("\r\n", "", $file->current());
+					if(file_exists($filepath)) {
+						$resp['code'] = 200;
+						$resp['status'] = 'success';
+						$file = new \SplFileObject($filepath, 'r');
+					    $file->seek(intval($data->line));
+					    $resp['data'] = str_replace("\r\n", "", $file->current());
+					} else {
+						$resp['message'] = 'notExists';
+					}
 				} else {
 					$resp['message'] = 'notExists';
 				}

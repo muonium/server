@@ -26,10 +26,12 @@ class rm extends c\FileManager {
 			$this->_modelFolders = new m\Folders($this->_uid);
 	        $this->_modelFiles = new m\Files($this->_uid);
 
-			if(isset($data->files) && is_array($data->files)) {
+			if(isset($data->files) && is_array($data->files) && count($data->files) > 0) {
+				$data->files = array_unique($data->files);
 				$this->rmFiles($data->files);
 			}
-			if(isset($data->folders) && is_array($data->folders)) {
+			if(isset($data->folders) && is_array($data->folders) && count($data->folders) > 0) {
+				$data->folders = array_unique($data->folders);
 				$this->rmFolders($data->folders);
 			}
 		}
@@ -98,9 +100,9 @@ class rm extends c\FileManager {
 				if(!array_key_exists(intval($folder->parent), $tab_folders)) {
 					$tab_folders[intval($folder->parent)] = 0;
 				}
-				$size = $this->rmFolder($folder->id);
+				$size = $this->rmFolder(intval($folder->id), intval($folder->parent)); // Add parent to ensure that the parent is correct
 				$removed_folders[] = intval($folder->id);
-				if(is_numeric($size) && floatval($size) > 0) {
+				if(is_numeric($size) && $size > 0) {
 					$total_size += $size;
 					$tab_folders[intval($folder->parent)] += $size;
 				}
@@ -140,7 +142,7 @@ class rm extends c\FileManager {
                     $fsize = @filesize(NOVA.'/'.$this->_uid.'/'.$path.$filename);
                 }
                 unlink(NOVA.'/'.$this->_uid.'/'.$path.$filename);
-                return [$fsize, $completed];
+                return [intval($fsize), $completed];
             }
         }
         return [0, true];
@@ -179,7 +181,7 @@ class rm extends c\FileManager {
         rmdir($full_path);
     }
 
-    private function rmFolder($id) {
+    private function rmFolder($id, $parent) {
         if(!is_pos_digit($id)) {
 			return 0;
 		}
@@ -187,10 +189,14 @@ class rm extends c\FileManager {
         if($size === false) {
 			return 0;
 		}
+		$fp = $this->_modelFolders->getParent($id);
+		if($fp === false || intval($parent) !== intval($fp)) {
+			return 0;
+		}
         // Delete folder, files, subfolders and also files in db
         $this->rmRdir($id);
         // Delete folders and subfolders in db and update parents folder size
         $this->_modelFolders->delete($id);
-        return $size;
+        return intval($size);
     }
 }

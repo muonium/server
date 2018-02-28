@@ -20,213 +20,216 @@ class mv extends c\FileManager {
 
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
-		} elseif((isset($data->files) && is_array($data->files) && count($data->files) > 0) || (isset($data->folders) && is_array($data->folders) && count($data->folders) > 0)) {
-		    $this->getFolderVars();
-			$copy = (isset($data->copy) && $data->copy == 1) ? 1 : 0; // 0 => cut, 1 => copy
+		} elseif(isset($data->folder_id) && is_pos_digit($data->folder_id) && (isset($data->files) && is_array($data->files) && count($data->files) > 0) || (isset($data->folders) && is_array($data->folders) && count($data->folders) > 0)) {
+		    if($this->getFolderVars()) {
+				$copy = (isset($data->copy) && $data->copy == 1) ? 1 : 0; // 0 => cut, 1 => copy
 
-		    $this->_modelFiles = new m\Files($this->_uid);
-		    $this->_modelFiles->folder_id = $this->_folderId;
+			    $this->_modelFiles = new m\Files($this->_uid);
+			    $this->_modelFiles->folder_id = $this->_folderId;
 
-		    if(!isset($data->old_folder_id)) {
-		        $old_folder_id = 0;
-		        $old_path = '';
-		    } elseif($data->old_folder_id == 0) {
-		        $old_folder_id = 0;
-		        $old_path = '';
-		    } elseif(is_pos_digit($data->old_folder_id)) {
-		        $old_folder_id = intval($data->old_folder_id);
-		        $old_path = $this->_modelFolders->getPath($old_folder_id);
-		        if($old_path !== false) {
-		        	$old_path .= $this->_modelFolders->getFoldername($old_folder_id).'/';
-				}
-		    }
+			    if(!isset($data->old_folder_id)) {
+			        $old_folder_id = 0;
+			        $old_path = '';
+			    } elseif($data->old_folder_id == 0) {
+			        $old_folder_id = 0;
+			        $old_path = '';
+			    } elseif(is_pos_digit($data->old_folder_id)) {
+			        $old_folder_id = intval($data->old_folder_id);
+			        $old_path = $this->_modelFolders->getPath($old_folder_id);
+			        if($old_path !== false) {
+			        	$old_path .= $this->_modelFolders->getFoldername($old_folder_id).'/';
+					}
+			    }
 
-			if(isset($old_folder_id) && isset($old_path) && is_pos_digit($old_folder_id) && $old_path !== false) {
-				$resp['data']['warning'] = [];
-				$this->_modelStorage = new m\Storage($this->_uid);
-		        $quota = $this->_modelStorage->getUserQuota();
-		        $stored = $this->_modelStorage->getSizeStored();
-				if($quota !== false && $stored !== false) {
-					$this->redis->set('token:'.$this->_token.':size_stored', $stored);
-					$this->redis->set('token:'.$this->_token.':user_quota', $quota);
-			        $uploaded = 0;
+				if(isset($old_folder_id) && isset($old_path) && is_pos_digit($old_folder_id) && $old_path !== false) {
+					$resp['data']['warning'] = [];
+					$this->_modelStorage = new m\Storage($this->_uid);
+			        $quota = $this->_modelStorage->getUserQuota();
+			        $stored = $this->_modelStorage->getSizeStored();
+					if($quota !== false && $stored !== false) {
+						$this->redis->set('token:'.$this->_token.':size_stored', $stored);
+						$this->redis->set('token:'.$this->_token.':user_quota', $quota);
+				        $uploaded = 0;
 
-			        if(is_dir(NOVA.'/'.$this->_uid.'/'.$this->_path) && is_dir(NOVA.'/'.$this->_uid.'/'.$old_path)) {
-			            if(isset($data->files) && is_array($data->files) && count($data->files) > 0) {
-			                if($copy === 0 && $this->_path != $old_path) {
-			                    //
-			                    // Cut and paste files
-			                    //
-			                    foreach($data->files as $file) {
-			                        if(is_pos_digit($file)) {
-										$filename = $this->_modelFiles->getFilename($file);
-			                            if($filename === false) {
-											$resp['data']['warning'][] = 'badFilename';
-											continue;
-										}
-			                            if(file_exists(NOVA.'/'.$this->_uid.'/'.$old_path.$filename)) {
-			                                // Files copies support
-			                                $dst_filename = $this->checkMultiple(NOVA.'/'.$this->_uid.'/'.$this->_path, $filename, 'file');
-			                                if($dst_filename === false) {
+				        if(is_dir(NOVA.'/'.$this->_uid.'/'.$this->_path) && is_dir(NOVA.'/'.$this->_uid.'/'.$old_path)) {
+				            if(isset($data->files) && is_array($data->files) && count($data->files) > 0) {
+								$data->files = array_unique($data->files);
+				                if($copy === 0 && $this->_path != $old_path) {
+				                    //
+				                    // Cut and paste files
+				                    //
+				                    foreach($data->files as $file) {
+				                        if(is_pos_digit($file)) {
+											$filename = $this->_modelFiles->getFilename($file, $old_folder_id); // old_folder_id in param in order to check if this file is really from it
+				                            if($filename === false) {
 												$resp['data']['warning'][] = 'badFilename';
 												continue;
 											}
-
-											if($key = $this->redis->get('token:'.$this->_token.':folder:'.$old_folder_id.':'.$filename)) {
-												$this->redis->del('token:'.$this->_token.':folder:'.$old_folder_id.':'.$filename);
-											}
-			                                if(rename(NOVA.'/'.$this->_uid.'/'.$old_path.$filename, NOVA.'/'.$this->_uid.'/'.$this->_path.$dst_filename)) {
-				                                $this->_modelFiles->id = intval($file);
-				                                $this->_modelFiles->name = $dst_filename;
-				                                $uploaded += filesize(NOVA.'/'.$this->_uid.'/'.$this->_path.$dst_filename);
-				                                $this->_modelFiles->updateDir();
-											} else {
-												$resp['data']['warning'][] = 'move';
-											}
-			                            }
-			                        }
-			                    }
-			                    // Update parent folders size
-			                    $this->_modelFolders->updateFoldersSize($old_folder_id, -1*$uploaded);
-			                }
-			                elseif($copy === 1) {
-			                    //
-			                    // Copy and paste files
-			                    //
-			                    foreach($data->files as $file) {
-			                        if(is_pos_digit($file)) {
-										$filename = $this->_modelFiles->getFilename($file);
-			                            if($filename === false) {
-											$resp['data']['warning'][] = 'badFilename';
-											continue;
-										}
-			                            if(file_exists(NOVA.'/'.$this->_uid.'/'.$old_path.$filename)) {
-			                                $this->_modelFiles->id = intval($file);
-			                                $this->_modelFiles->size = filesize(NOVA.'/'.$this->_uid.'/'.$old_path.$filename);
-			                                if($stored+$this->_modelFiles->size < $quota) {
-												// Files copies support
-			                                    $dst_filename = $this->checkMultiple(NOVA.'/'.$this->_uid.'/'.$this->_path, $filename, 'file');
-			                                    if($dst_filename === false) {
+				                            if(file_exists(NOVA.'/'.$this->_uid.'/'.$old_path.$filename)) {
+				                                // Files copies support
+				                                $dst_filename = $this->checkMultiple(NOVA.'/'.$this->_uid.'/'.$this->_path, $filename, 'file');
+				                                if($dst_filename === false) {
 													$resp['data']['warning'][] = 'badFilename';
 													continue;
 												}
 
-			                                    $stored 	+= $this->_modelFiles->size;
-			                                    $uploaded 	+= $this->_modelFiles->size;
-			                                    $this->_modelFiles->last_modification = time();
-			                                    $this->_modelFiles->name = $dst_filename;
-
-			                                    $oldPath = NOVA.'/'.$this->_uid.'/'.$old_path.$filename;
-			                                    $newPath = NOVA.'/'.$this->_uid.'/'.$this->_path.$dst_filename;
-												if(copy($oldPath, $newPath)) {
-													$this->_modelFiles->addNewFile($this->_folderId, false);
-												} else {
-													$resp['data']['warning'][] = 'copy';
+												if($key = $this->redis->get('token:'.$this->_token.':folder:'.$old_folder_id.':'.$filename)) {
+													$this->redis->del('token:'.$this->_token.':folder:'.$old_folder_id.':'.$filename);
 												}
-			                                } else {
-												$resp['message'] = 'quota';
+				                                if(rename(NOVA.'/'.$this->_uid.'/'.$old_path.$filename, NOVA.'/'.$this->_uid.'/'.$this->_path.$dst_filename)) {
+					                                $this->_modelFiles->id = intval($file);
+					                                $this->_modelFiles->name = $dst_filename;
+					                                $uploaded += filesize(NOVA.'/'.$this->_uid.'/'.$this->_path.$dst_filename);
+					                                $this->_modelFiles->updateDir();
+												} else {
+													$resp['data']['warning'][] = 'move';
+												}
+				                            }
+				                        }
+				                    }
+				                    // Update parent folders size
+				                    $this->_modelFolders->updateFoldersSize($old_folder_id, -1*$uploaded);
+				                }
+				                elseif($copy === 1) {
+				                    //
+				                    // Copy and paste files
+				                    //
+				                    foreach($data->files as $file) {
+				                        if(is_pos_digit($file)) {
+											$filename = $this->_modelFiles->getFilename($file, $old_folder_id); // old_folder_id in param in order to check if this file is really from it
+				                            if($filename === false) {
+												$resp['data']['warning'][] = 'badFilename';
+												continue;
 											}
-			                            }
-			                        }
-			                    }
-			                }
-			            } // end files
+				                            if(file_exists(NOVA.'/'.$this->_uid.'/'.$old_path.$filename)) {
+				                                $this->_modelFiles->id = intval($file);
+				                                $this->_modelFiles->size = filesize(NOVA.'/'.$this->_uid.'/'.$old_path.$filename);
+				                                if($stored+$this->_modelFiles->size < $quota) {
+													// Files copies support
+				                                    $dst_filename = $this->checkMultiple(NOVA.'/'.$this->_uid.'/'.$this->_path, $filename, 'file');
+				                                    if($dst_filename === false) {
+														$resp['data']['warning'][] = 'badFilename';
+														continue;
+													}
 
-			            if(isset($data->folders) && is_array($data->folders) && count($data->folders) > 0) {
-			                if($copy === 0 && $this->_path != $old_path) {
-			                    //
-			                    //	Cut and paste folders
-			                    //
-			                    foreach($data->folders as $folder) {
-			                        $foldername = $this->_modelFolders->getFolderName($folder);
-			                        if($foldername === false) {
-										$resp['data']['warning'][] = 'badFoldername';
-										continue;
-									}
-			                        if(is_dir(NOVA.'/'.$this->_uid.'/'.$old_path.$foldername)) {
-			                            $folderSize = $this->_modelFolders->getSize($folder);
-			                            $old_parent = $this->_modelFolders->getParent($folder);
+				                                    $stored 	+= $this->_modelFiles->size;
+				                                    $uploaded 	+= $this->_modelFiles->size;
+				                                    $this->_modelFiles->last_modification = time();
+				                                    $this->_modelFiles->name = $dst_filename;
 
-			                            // Folder copies support
-			                            $dst_foldername = $this->checkMultiple(NOVA.'/'.$this->_uid.'/'.$this->_path, $foldername, 'folder');
-			                            if($dst_foldername === false) {
+				                                    $oldPath = NOVA.'/'.$this->_uid.'/'.$old_path.$filename;
+				                                    $newPath = NOVA.'/'.$this->_uid.'/'.$this->_path.$dst_filename;
+													if(copy($oldPath, $newPath)) {
+														$this->_modelFiles->addNewFile($this->_folderId, false);
+													} else {
+														$resp['data']['warning'][] = 'copy';
+													}
+				                                } else {
+													$resp['message'] = 'quota';
+												}
+				                            }
+				                        }
+				                    }
+				                }
+				            } // end files
+
+				            if(isset($data->folders) && is_array($data->folders) && count($data->folders) > 0) {
+								$data->folders = array_unique($data->folders);
+				                if($copy === 0 && $this->_path != $old_path) {
+				                    //
+				                    //	Cut and paste folders
+				                    //
+				                    foreach($data->folders as $folder) {
+				                        $foldername = $this->_modelFolders->getFolderName($folder, $old_folder_id); // old_folder_id in param in order to check if this folder is really from it
+				                        if($foldername === false) {
 											$resp['data']['warning'][] = 'badFoldername';
 											continue;
 										}
+				                        if(is_dir(NOVA.'/'.$this->_uid.'/'.$old_path.$foldername)) {
+				                            $folderSize = $this->_modelFolders->getSize($folder);
+				                            $old_parent = $this->_modelFolders->getParent($folder);
 
-										if($key = $this->redis->get('token:'.$this->_token.':folder:'.$folder)) {
-			                                $this->redis->del('token:'.$this->_token.':folder:'.$folder);
-										}
-
-			                            $basePath = NOVA.'/'.$this->_uid.'/';
-			                            $oldFolderName = $basePath.$old_path.$foldername.'/';
-			                            $newFolderName = $basePath.$this->_path.$dst_foldername.'/';
-			                            if(!($oldFolderName == substr($newFolderName, 0, strlen($oldFolderName)))) { //Check if it's not a child, improvable
-			                                if(rename($oldFolderName, $newFolderName)) {
-			                                    $this->_modelFolders->name = $dst_foldername;
-			                                    $this->_modelFolders->updateParent($folder, $this->_folderId);
-			                                    $this->_modelFolders->updatePath($folder, $this->_path, $dst_foldername);
-
-			                                    // Update parent folders size
-			                                    $this->_modelFolders->updateFoldersSize($old_parent, -1*$folderSize);
-			                                    $uploaded += $folderSize;
-			                                } else {
-			                                    $resp['data']['warning'][] = 'move';
+				                            // Folder copies support
+				                            $dst_foldername = $this->checkMultiple(NOVA.'/'.$this->_uid.'/'.$this->_path, $foldername, 'folder');
+				                            if($dst_foldername === false) {
+												$resp['data']['warning'][] = 'badFoldername';
+												continue;
 											}
-			                            } else {
-			                                $resp['data']['warning'][] = 'isAChild';
-										}
-			                        }
-			                    }
-			                }
-			                elseif($copy === 1) {
-			                    //
-			                    //	Copy and paste folders
-			                    //
-			                    foreach($data->folders as $folder) {
-			                        $foldername = $this->_modelFolders->getFolderName($folder);
-			                        if($foldername === false) {
-										$resp['data']['warning'][] = 'badFoldername';
-										continue;
-									}
-			                        if(is_dir(NOVA.'/'.$this->_uid.'/'.$old_path.$foldername)) {
-			                            $dst_foldername = $this->checkMultiple(NOVA.'/'.$this->_uid.'/'.$this->_path, $foldername, 'folder');
-			                            $basePath = NOVA.'/'.$this->_uid.'/';
-			                            $oldFolderName = $basePath.$old_path.$foldername.'/';
-			                            $newFolderName = $basePath.$this->_path.$dst_foldername.'/';
 
-			                            if(!($oldFolderName == substr($newFolderName, 0, strlen($oldFolderName)))) { //Improvable
-			                                $folderSize = $this->_modelFolders->getSize($folder);
-			                                if($stored+$folderSize < $quota) {
-			                                    $stored 	+= $folderSize;
-			                                    $uploaded 	+= $folderSize;
-			                                    //recurse_copy add also new files and subfolders in db
-			                                    $this->recurse_copy($folder, $this->_folderId);
-			                                } else {
-			                                    $resp['message'] = 'quota';
+											if($key = $this->redis->get('token:'.$this->_token.':folder:'.$folder)) {
+				                                $this->redis->del('token:'.$this->_token.':folder:'.$folder);
 											}
-			                            } else {
-			                                $resp['data']['warning'][] = 'isAChild';
-										}
-			                        }
-			                    }
-			                }
-			            } // end folders
 
-			            if($this->_modelStorage->updateSizeStored($stored)) {
-							$this->redis->set('token:'.$this->_token.':size_stored', $stored);
-						}
-			            if($uploaded !== 0) {
-							$this->_modelFolders->updateFoldersSize($this->_folderId, $uploaded);
-						}
-						if($resp['message'] === null) {
-							$resp['code'] = 200;
-							$resp['status'] = 'success';
-							$resp['message'] = 'ok';
-						}
-			        }
+				                            $basePath = NOVA.'/'.$this->_uid.'/';
+				                            $oldFolderName = $basePath.$old_path.$foldername.'/';
+				                            $newFolderName = $basePath.$this->_path.$dst_foldername.'/';
+				                            if(!($oldFolderName == substr($newFolderName, 0, strlen($oldFolderName)))) { //Check if it's not a child, improvable
+				                                if(rename($oldFolderName, $newFolderName)) {
+				                                    $this->_modelFolders->name = $dst_foldername;
+				                                    $this->_modelFolders->updateParent($folder, $this->_folderId);
+				                                    $this->_modelFolders->updatePath($folder, $this->_path, $dst_foldername);
+
+				                                    // Update parent folders size
+				                                    $this->_modelFolders->updateFoldersSize($old_parent, -1*$folderSize);
+				                                    $uploaded += $folderSize;
+				                                } else {
+				                                    $resp['data']['warning'][] = 'move';
+												}
+				                            } else {
+				                                $resp['data']['warning'][] = 'isAChild';
+											}
+				                        }
+				                    }
+				                }
+				                elseif($copy === 1) {
+				                    //
+				                    //	Copy and paste folders
+				                    //
+				                    foreach($data->folders as $folder) {
+				                        $foldername = $this->_modelFolders->getFolderName($folder, $old_folder_id); // old_folder_id in param in order to check if this folder is really from it
+				                        if($foldername === false) {
+											$resp['data']['warning'][] = 'badFoldername';
+											continue;
+										}
+				                        if(is_dir(NOVA.'/'.$this->_uid.'/'.$old_path.$foldername)) {
+				                            $dst_foldername = $this->checkMultiple(NOVA.'/'.$this->_uid.'/'.$this->_path, $foldername, 'folder');
+				                            $basePath = NOVA.'/'.$this->_uid.'/';
+				                            $oldFolderName = $basePath.$old_path.$foldername.'/';
+				                            $newFolderName = $basePath.$this->_path.$dst_foldername.'/';
+
+				                            if(!($oldFolderName == substr($newFolderName, 0, strlen($oldFolderName)))) { //Improvable
+				                                $folderSize = $this->_modelFolders->getSize($folder);
+				                                if($stored+$folderSize < $quota) {
+				                                    $stored 	+= $folderSize;
+				                                    $uploaded 	+= $folderSize;
+				                                    //recurse_copy add also new files and subfolders in db
+				                                    $this->recurse_copy($folder, $this->_folderId);
+				                                } else {
+				                                    $resp['message'] = 'quota';
+												}
+				                            } else {
+				                                $resp['data']['warning'][] = 'isAChild';
+											}
+				                        }
+				                    }
+				                }
+				            } // end folders
+
+				            if($this->_modelStorage->updateSizeStored($stored)) {
+								$this->redis->set('token:'.$this->_token.':size_stored', $stored);
+							}
+				            if($uploaded !== 0) {
+								$this->_modelFolders->updateFoldersSize($this->_folderId, $uploaded);
+							}
+							if($resp['message'] === null) {
+								$resp['code'] = 200;
+								$resp['status'] = 'success';
+								$resp['message'] = 'ok';
+							}
+				        }
+					}
+					$resp['data']['warning'] = array_unique($resp['data']['warning']);
 				}
-				$resp['data']['warning'] = array_unique($resp['data']['warning']);
 			}
 		} else {
 			$resp['message'] = 'emptyField';

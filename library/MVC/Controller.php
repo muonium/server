@@ -12,8 +12,8 @@ class Controller {
 
 	private $redis;
 	private $addr = 'tcp://127.0.0.1:6379';
-	//private $exp = 1200;
-	private $exp = 120000; // dev
+	private $exp = 1200;
+	//private $exp = 120000; // dev
 	private $decoded = null;
 
 	// Current token and UID - can be used in controllers that require a logged user

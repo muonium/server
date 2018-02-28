@@ -37,11 +37,16 @@ class Folders extends l\Model {
         return $res['id'];
     }
 
-    function getFoldername($id) {
-		// id (int) - Returns folder name from its id
+    function getFoldername($id, $folder_id = null) {
+		// id (int) - Returns folder name from its id, folder_id (int) - optionnal - folder_id to check if this folder is really from it and not from trash
 		if($this->id_owner === null) return false;
-        $req = self::$_sql->prepare("SELECT name FROM folders WHERE id_owner = ? AND id = ?");
-        $req->execute([$this->id_owner, $id]);
+		if(is_pos_digit($folder_id)) {
+			$req = self::$_sql->prepare("SELECT name FROM folders WHERE id_owner = ? AND id = ? AND parent = ? AND trash = 0");
+        	$req->execute([$this->id_owner, $id, $folder_id]);
+		} else {
+        	$req = self::$_sql->prepare("SELECT name FROM folders WHERE id_owner = ? AND id = ?");
+        	$req->execute([$this->id_owner, $id]);
+		}
         if($req->rowCount() === 0) return false;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
         return $res['name'];

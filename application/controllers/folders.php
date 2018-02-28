@@ -21,25 +21,26 @@ class folders extends c\FileManager {
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
-        elseif(isset($data->name)) {
-			$this->getFolderVars();
-            $folder = $this->parseFilename(urldecode($data->name));
-            if(strlen($folder) > 64) { // max length 64 chars
-                $folder = substr($folder, 0, 64);
-			}
+        elseif(isset($data->name) && isset($data->folder_id) && is_pos_digit($data->folder_id)) {
+			if($this->getFolderVars()) {
+	            $folder = $this->parseFilename(urldecode($data->name));
+	            if(strlen($folder) > 64) { // max length 64 chars
+	                $folder = substr($folder, 0, 64);
+				}
 
-            if(is_dir(NOVA.'/'.$this->_uid.'/'.$this->_path) && !is_dir(NOVA.'/'.$this->_uid.'/'.$this->_path.$folder)) {
-                $this->_modelFolders->name = $folder;
-                $this->_modelFolders->parent = $this->_folderId;
-                $this->_modelFolders->path = $this->_path;
-                if($this->_modelFolders->addFolder()) {
-					$resp['code'] = 201;
-					$resp['status'] = 'success';
-                	mkdir(NOVA.'/'.$this->_uid.'/'.$this->_path.$folder, 0770);
-					$resp['data'] = $this->_modelFolders->getLastInsertedId();
-                }
-            } else {
-				$resp['message'] = 'exists';
+	            if(is_dir(NOVA.'/'.$this->_uid.'/'.$this->_path) && !is_dir(NOVA.'/'.$this->_uid.'/'.$this->_path.$folder)) {
+	                $this->_modelFolders->name = $folder;
+	                $this->_modelFolders->parent = $this->_folderId;
+	                $this->_modelFolders->path = $this->_path;
+	                if($this->_modelFolders->addFolder()) {
+						$resp['code'] = 201;
+						$resp['status'] = 'success';
+	                	mkdir(NOVA.'/'.$this->_uid.'/'.$this->_path.$folder, 0770);
+						$resp['data'] = $this->_modelFolders->getLastInsertedId();
+	                }
+	            } else {
+					$resp['message'] = 'exists';
+				}
 			}
         } else {
 			$resp['message'] = 'emptyField';
@@ -149,8 +150,8 @@ class folders extends c\FileManager {
         $stored = $this->_modelStorage->getSizeStored();
 
 		if($quota !== false && $stored !== false) {
-			$redis->set('token:'.$this->_token.':user_quota', $quota);
-			$redis->set('token:'.$this->_token.':size_stored', $stored);
+			$this->redis->set('token:'.$this->_token.':user_quota', $quota);
+			$this->redis->set('token:'.$this->_token.':size_stored', $stored);
 		}
 
 		$path = htmlspecialchars($this->_modelFolders->getFullPath($this->_folderId));
@@ -167,20 +168,20 @@ class folders extends c\FileManager {
             $resp['data']['parent'] = $this->_modelFolders->getParent($this->_folderId);
         }
 
-        if($subdirs = $this->_modelFolders->getChildren($this->_folderId, $this->trash)) {
+        if($subdirs = $this->_modelFolders->getChildren($this->_folderId, $this->_trash)) {
             foreach($subdirs as $subdir) {
 				$folder = [];
 				$folder['id'] = $subdir['id'];
 				$folder['name'] = htmlspecialchars($this->parseFilename($subdir['name']));
 				$folder['size'] = $subdir['size'];
 				$folder['path'] = htmlspecialchars($subdir['path']);
-				$folder['parent'] = htmlspecialchars($subdir['parent']);
+				$folder['parent'] = intval($subdir['parent']);
                 $folder['nb_elements'] = count(glob(NOVA.'/'.$this->_uid.'/'.$subdir['path'].$subdir['name']."/*"));
 				$resp['data']['folders'][] = $folder;
             }
         }
 
-        if($files = $this->_modelFiles->getFiles($this->_folderId, $this->trash)) {
+        if($files = $this->_modelFiles->getFiles($this->_folderId, $this->_trash)) {
             foreach($files as $file) {
 				$fpath = $path;
                 if(array_key_exists('path', $file) && array_key_exists('dname', $file)) {
@@ -190,7 +191,7 @@ class folders extends c\FileManager {
 				$f['id'] = $file['id'];
 				$f['is_shared'] = $file['dk'] === null || strlen($file['dk']) === 0 ? false : true;
 				$f['name'] = htmlspecialchars($this->parseFilename($file['name']));
-				$f['folder_id'] = htmlspecialchars($file['folder_id']);
+				$f['folder_id'] = intval($file['folder_id']);
 				$f['path'] = htmlspecialchars($fpath);
 				$f['is_completed'] = $file['size'] < 0 ? false : true;
 				$f['size'] = $f['is_completed'] ? $file['size'] : @filesize(NOVA.'/'.$this->_uid.'/'.$fpath.'/'.$file['name']);

@@ -61,14 +61,19 @@ class Files extends l\Model {
         return $req->fetch(\PDO::FETCH_ASSOC);
 	}
 
-    function getFilename($id = null) {
-		// id (int) - File id
+    function getFilename($id = null, $folder_id = null) {
+		// id (int) - File id, folder_id (int) - optionnal - folder_id to check if this file is really from it and not from trash
 		// Returns filename, or false if it doesn't exist
 		if($this->id_owner === null) return false;
 		$id = ($id === null) ? $this->id : $id;
 		if(!is_pos_digit($id)) return false;
-        $req = self::$_sql->prepare("SELECT name FROM files WHERE id_owner = ? AND id = ?");
-        $req->execute([$this->id_owner, $id]);
+		if(is_pos_digit($folder_id)) {
+			$req = self::$_sql->prepare("SELECT name FROM files WHERE id_owner = ? AND id = ? AND folder_id = ? AND trash = 0");
+        	$req->execute([$this->id_owner, $id, $folder_id]);
+		} else {
+        	$req = self::$_sql->prepare("SELECT name FROM files WHERE id_owner = ? AND id = ?");
+        	$req->execute([$this->id_owner, $id]);
+		}
         if($req->rowCount() === 0) return false;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
         return $res['name'];
