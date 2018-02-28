@@ -3,7 +3,4 @@ config/confMail.php
 config/confPayments.php
 config/secretKey.php
 public
-doc/*
 vendor/*
-/README.md
-application/controllers/test.php
