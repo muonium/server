@@ -99,8 +99,11 @@ class user extends l\Controller {
                 if(password_verify($old_pwd, $user_pwd)) {
                     $this->_modelUser->password = password_hash(urldecode($data->new_pwd), PASSWORD_BCRYPT);
                     if($this->_modelUser->updatePassword()) {
+						$this->removeTokens($this->_uid);
 						$resp['code'] = 200;
 						$resp['status'] = 'success';
+						$resp['message'] = 'removeToken';
+						$resp['token'] = null;
                     }
                 } else {
                     $resp['message'] = 'badOldPass';
@@ -198,10 +201,10 @@ class user extends l\Controller {
 								if($this->_modelUser->deleteUser()) {
 									removeDirectory(NOVA.'/'.$this->_uid);
 									$this->removeTokens($this->_uid);
-
 									$resp['code'] = 200;
 									$resp['status'] = 'success';
 									$resp['message'] = 'removeToken';
+									$resp['token'] = null;
 									return $resp;
 								}
 							}
