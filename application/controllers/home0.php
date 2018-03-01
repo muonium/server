@@ -3,7 +3,7 @@ namespace application\controllers;
 use \library as h;
 use \library\MVC as l;
 
-class Home extends l\Controller {
+class home extends l\Controller {
 	public function languagesAction() {
 		header("Content-type: application/json");
 		$resp = self::RESP;

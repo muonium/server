@@ -7,7 +7,7 @@ use \config as conf;
 
 /* Called after a transaction by CoinPayments */
 
-class IPN extends l\Controller {
+class ipn extends l\Controller {
 	private $_modelUpgrade;
 	private $_modelStoragePlans;
 	private $_modelUsers;
