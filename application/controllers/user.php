@@ -254,9 +254,6 @@ class user extends l\Controller {
 							}
 
 							if($this->_modelUser->Insertion()) {
-								$resp['code'] = 201;
-								$resp['status'] = 'success';
-
 								// Send registration mail with validation key
 								$uid = $this->_modelUser->getLastInsertedId();
 								$key = hash('sha512', uniqid(rand(), true));
@@ -279,8 +276,11 @@ class user extends l\Controller {
 								$this->_mail->send();
 
 								// Create user folder
-								mkdir(NOVA.'/'.$uid, 0770);
-								$resp['message'] = 'created';
+								if(mkdir(NOVA.'/'.$uid, 0770)) {
+									$resp['code'] = 201;
+									$resp['status'] = 'success';
+									$resp['message'] = 'created';
+								}
 							}
 						} else {
 							$resp['message'] = 'loginExists';
