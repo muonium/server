@@ -1,6 +1,7 @@
 <?php
 namespace library\MVC;
 use \library as h;
+use \config as conf;
 
 class Controller {
     // This class is called by all controllers (with "extends")
@@ -11,9 +12,7 @@ class Controller {
     public static $userLanguage = DEFAULT_LANGUAGE;
 
 	private $redis;
-	private $addr = 'tcp://127.0.0.1:6379';
 	private $exp = 1200;
-	//private $exp = 120000; // dev
 	private $decoded = null;
 
 	// Current token and UID - can be used in controllers that require a logged user
@@ -43,7 +42,7 @@ class Controller {
 
     // Constructor loads user language json
     function __construct($tab = '') {
-		$this->redis = new \Predis\Client($this->addr);
+		$this->redis = new \Predis\Client(conf\confRedis::parameters, conf\confRedis::options);
 		$resp = self::RESP;
         if(is_array($tab)) {
 			// Authentication middleware

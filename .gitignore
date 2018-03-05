@@ -1,6 +1,7 @@
 config/confDB.php
 config/confMail.php
 config/confPayments.php
+config/confRedis.php
 config/secretKey.php
 public
 vendor/*

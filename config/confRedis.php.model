@@ -1,0 +1,28 @@
+<?php
+namespace config;
+// Class used for Redis database connection configuration
+class confRedis {
+	// Check Predis doc (https://github.com/nrk/predis/blob/v1.1/README.md) in order to complete parameters and options
+
+	const parameters = [
+		// 'tcp://10.0.0.1', 'tcp://10.0.0.2', 'tcp://10.0.0.3' 				// Cluster/Sentinel example
+		// 'tcp://10.0.0.1?alias=master', 'tcp://10.0.0.2', 'tcp://10.0.0.3'	// Replication example
+
+		// Without replication
+		'scheme' 	=> 'tcp',
+		'host' 		=> '10.0.0.1',
+		'port' 		=> 6379,
+		//'ssl'		=> ['cafile' => 'private.pem', 'verify_peer' => true],
+	];
+
+	const options = [
+		//'cluster' 	=> 'redis',
+		//'replication' => true,
+		//'replication' => 'sentinel',
+		//'service' 	=> 'mymaster',
+		//'parameters'	=> [
+			//'password' => '',
+			//'database' => 10,
+		//],
+	];
+}
