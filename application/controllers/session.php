@@ -28,7 +28,7 @@ class session extends l\Controller {
 			if(isset($data->uid) && isset($data->password) && isset($data->code)) {
 				if(is_numeric($data->uid) && strlen($data->code) === 8) {
 					$user = new m\Users($data->uid);
-					$user->password = $data->password;
+					$user->password = urldecode($data->password);
 					$pass = $user->getPassword();
 					$cek = $user->getCek();
 
@@ -95,7 +95,7 @@ class session extends l\Controller {
 				$email = $data->username;
 			}
 
-			$new_user->password = $data->password;
+			$new_user->password = urldecode($data->password);
 
 			if(!($id = $new_user->getId())) {
                 // User doesn't exists

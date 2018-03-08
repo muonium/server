@@ -2,12 +2,19 @@
 // This file is always called
 use \library\MVC as l;
 
+if($_SERVER['REQUEST_METHOD'] === 'OPTIONS' && isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD'])) {
+    // Handling preflight requests
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Headers: X-Requested-With');
+    exit;
+}
+
 require_once("./vendor/autoload.php");
 
 // Defines
 
 // Mui Version
-define('VERSION', '2018.03.05.1');
+define('VERSION', '2018.03.08.0');
 
 define('DS', DIRECTORY_SEPARATOR);
 define('ROOT', __DIR__);
