@@ -39,6 +39,7 @@ class session extends l\Controller {
 						if($mUserVal->getKey()) {
 							// Key found - User needs to validate its account (double auth only for validated accounts)
 							$resp['code'] = 401;
+              $resp['data'] = $data->uid;
 							$resp['message'] = 'validate';
 						}
 						elseif($user->getDoubleAuth()) {
@@ -49,6 +50,7 @@ class session extends l\Controller {
 								$resp['status'] = 'success';
 								$resp['token'] = $this->buildToken($data->uid);
 								$resp['data']['cek'] = $cek;
+                $resp['data']['uid'] = $id;
 							} else {
 								// Wrong code
 								$resp['code'] = 401;
@@ -127,6 +129,7 @@ class session extends l\Controller {
                                 $mail->_to = $e;
                                 $mail->_subject = "Muonium - ".self::$txt->Profile->doubleAuth;
                                 $mail->_message = str_replace("[key]", $code, self::$txt->Login->doubleAuthMessage);
+                                $resp['data'] = $id;
                                 if($mail->send() === 'wait') {
 									$resp['message'] = 'wait';
 								} else {
@@ -137,10 +140,12 @@ class session extends l\Controller {
 								$resp['token'] = $this->buildToken($id);
 							}
                             $resp['data']['cek'] = $cek; // the CEK is already url encoded in the database
+                            $resp['data']['uid'] = $id;
                         }
                         else {
                             // Key found - User needs to validate its account (double auth only for validated accounts)
 							$resp['code'] = 401;
+                            $resp['data'] = $id;
                             $resp['message'] = 'validate';
                         }
                         return $resp;

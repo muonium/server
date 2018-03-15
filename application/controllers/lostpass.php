@@ -68,38 +68,55 @@ class lostpass extends l\Controller {
 			$resp['code'] = 405; // Method Not Allowed
 		}
 		elseif($this->isLogged() === false) {
-        	sleep(2);
-			if(isset($data->uid) && is_pos_digit($data->uid)) {
-            	$this->uid = intval($data->uid);
-                $this->_modelUser = new m\Users($this->uid);
-				if($user_mail = $this->_modelUser->getEmail()) {
-					$resp['code'] = 200;
-					$resp['status'] = 'success';
-
-					$key = hash('sha512', uniqid(rand(), true));
-
-                	$this->_modelUserLostPass = new m\UserLostPass($this->uid);
-                	$new = $this->_modelUserLostPass->getKey() ? false : true;
-                	$this->_modelUserLostPass->val_key = $key;
-                	$this->_modelUserLostPass->expire = time()+3600;
-
-                	if($new) {
-						$this->_modelUserLostPass->Insertion();
-                	} else {
-						$this->_modelUserLostPass->Update();
+			sleep(2);
+			if((isset($data->uid) && is_pos_digit($data->uid)) || isset($data->username)) {
+				if(isset($data->username)) {
+					$new_user = new m\Users();
+					if(filter_var($data->username, FILTER_VALIDATE_EMAIL) === false) {
+						$new_user->login = $data->username;
+					} else {
+						$new_user->email = $data->username;
 					}
+					$uid = $new_user->getId();
+				} else {
+					$uid = $data->uid;
+				}
 
-                	$this->_mail = new l\Mail();
-					$this->_mail->delay(60, $this->uid, $this->redis, 'lostpass');
-                	$this->_mail->_to = $user_mail;
-                	$this->_mail->_subject = self::$txt->LostPass->subject;
-	                $this->_mail->_message = str_replace(
-	                    ["[id_user]", "[key]", "[url_app]"],
-	                    [$this->uid, $key, URL_APP],
-	                    self::$txt->LostPass->message
-	                );
+				if($uid !== false) {
+					$this->uid = intval($uid);
+					$this->_modelUser = new m\Users($this->uid);
 
-					$resp['message'] = $this->_mail->send(); // 'sent' or 'wait'
+					if($user_mail = $this->_modelUser->getEmail()) {
+						$resp['code'] = 200;
+						$resp['status'] = 'success';
+
+						$key = hash('sha512', uniqid(rand(), true));
+
+						$this->_modelUserLostPass = new m\UserLostPass($this->uid);
+						$new = $this->_modelUserLostPass->getKey() ? false : true;
+						$this->_modelUserLostPass->val_key = $key;
+						$this->_modelUserLostPass->expire = time()+3600;
+
+						if($new) {
+							$this->_modelUserLostPass->Insertion();
+						} else {
+							$this->_modelUserLostPass->Update();
+						}
+
+						$this->_mail = new l\Mail();
+						$this->_mail->delay(60, $this->uid, $this->redis, 'lostpass');
+						$this->_mail->_to = $user_mail;
+						$this->_mail->_subject = self::$txt->LostPass->subject;
+						$this->_mail->_message = str_replace(
+							["[id_user]", "[key]", "[url_app]"],
+							[$this->uid, $key, URL_APP],
+							self::$txt->LostPass->message
+						);
+						$resp['data'] = $this->uid;
+						$resp['message'] = $this->_mail->send(); // 'sent' or 'wait'
+					}
+				} else {
+					$resp['message'] = 'unknownUser';
 				}
             } else {
 				$resp['message'] = 'emptyField';

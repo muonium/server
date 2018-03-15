@@ -280,6 +280,7 @@ class user extends l\Controller {
 									$resp['code'] = 201;
 									$resp['status'] = 'success';
 									$resp['message'] = 'created';
+                  $resp['data'] = $uid;
 								}
 							}
 						} else {
