@@ -94,7 +94,7 @@ class folders extends c\FileManager {
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
-		elseif(isset($data->old) && isset($data->new) && isset($data->folder_id) && is_pos_digit($data->folder_id) && $data->folder_id != 0) {
+		elseif(isset($data->old) && isset($data->new) && isset($data->folder_id) && is_pos_digit($data->folder_id)) {
 			$this->_modelFiles = new m\Files($this->_uid);
 			$this->_modelFolders = new m\Folders($this->_uid);
 
