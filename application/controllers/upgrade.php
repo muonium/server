@@ -75,6 +75,7 @@ class upgrade extends l\Controller {
 			$resp['code'] = 405; // Method Not Allowed
 		}
 		else {
+      $upgrades = [];
 			if($upgrades = $this->_modelUpgrade->getUpgrades()) {
 				foreach($upgrades as $i => $upgrade) {
 					unset($upgrade['id']);
@@ -82,10 +83,10 @@ class upgrade extends l\Controller {
 					$upgrade['currency_symbol'] = currencySymbol($upgrade['currency']);
 					$upgrades[$i] = $upgrade;
 				}
-				$resp['code'] = 200;
-				$resp['status'] = 'success';
-				$resp['data'] = $upgrades;
 			}
+      $resp['code'] = 200;
+      $resp['status'] = 'success';
+      $resp['data'] = $upgrades;
 		}
 
 		http_response_code($resp['code']);
