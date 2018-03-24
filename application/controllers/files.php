@@ -241,9 +241,9 @@ class files extends c\FileManager {
 						$filepath = NOVA.'/'.$this->_uid.'/'.$path.$filename;
 						$status = explode('@', $this->filestatus($filepath));
 						if(count($status) === 2) {
-							$resp['data']['line'] = $status[1];
+							$resp['data']['line'] = intval($status[1]);
 						}
-						$resp['data']['status'] = $status[0];
+						$resp['data']['status'] = intval($status[0]);
 					} else {
 						$resp['data']['status'] = 0;
 					}
