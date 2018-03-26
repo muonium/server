@@ -58,7 +58,10 @@ class Mail {
         $message_html = $this->_message;
 
         $mail = new PHPMailer();
-        if($this->debug) $mail->SMTPDebug = 3; // Debug
+        if($this->debug) {
+          $mail->Debugoutput = 'html';
+          $mail->SMTPDebug = 3; // Debug
+        }
         $mail->isSMTP();
         $mail->Host = conf\confMail::smtp_host;
         $mail->SMTPAuth = conf\confMail::smtp_auth;
