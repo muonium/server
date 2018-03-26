@@ -27,11 +27,11 @@ class rm extends c\FileManager {
 	        $this->_modelFiles = new m\Files($this->_uid);
 
 			if(isset($data->files) && is_array($data->files) && count($data->files) > 0) {
-				$data->files = array_unique($data->files);
+				$data->files = array_unique($data->files, SORT_REGULAR);
 				$this->rmFiles($data->files);
 			}
 			if(isset($data->folders) && is_array($data->folders) && count($data->folders) > 0) {
-				$data->folders = array_unique($data->folders);
+				$data->folders = array_unique($data->folders, SORT_REGULAR);
 				$this->rmFolders($data->folders);
 			}
 		}
