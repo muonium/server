@@ -53,8 +53,10 @@ class files extends c\FileManager {
 			if($filename !== false) {
 				$fp = $this->redis->get('token:'.$this->_token.':folder:'.$folder_id);
 				$fs = $this->redis->get('token:'.$this->_token.':folder:'.$folder_id.':'.$filename);
-				if($fs !== null && $fp !== null) {
+
+				if($fs !== null) {
 					// We have already write into this file in this session
+          $fp = $fp === null ? '' : $fp;
 					if($fs == 0 || $fs == 1) {
 						$filepath = NOVA.'/'.$this->_uid.'/'.$fp.$filename;
 						$resp = write($filepath, $cnt, $resp, $this->redis, $this->_uid);
@@ -66,7 +68,9 @@ class files extends c\FileManager {
 					if($path !== false) {
 						$filepath = NOVA.'/'.$this->_uid.'/'.$path.$filename;
 						$filestatus = $this->fileStatus($filepath);
-						$this->redis->set('token:'.$this->_token.':folder:'.$folder_id, $path);
+            if($path !== '') {
+						    $this->redis->set('token:'.$this->_token.':folder:'.$folder_id, $path);
+            }
 						$this->redis->set('token:'.$this->_token.':folder:'.$folder_id.':'.$filename, $filestatus);
 
 	                    if($filestatus !== 2) {
@@ -82,11 +86,14 @@ class files extends c\FileManager {
 							$resp = write($filepath, $cnt, $resp, $this->redis, $this->_uid);
 						}
 					}
+        }
 
 					// End of file
 					$fp = $this->redis->get('token:'.$this->_token.':folder:'.$folder_id);
 					$fs = $this->redis->get('token:'.$this->_token.':folder:'.$folder_id.':'.$filename);
-					if($cnt === 'EOF' && $fs !== null && $fp !== null) {
+
+					if($cnt === 'EOF' && $fs !== null) {
+            $fp = $fp === null ? '' : $fp;
 						// Update files table and folders size
 						if(!isset($this->_modelFiles)) {
 							$this->_modelFiles = new m\Files($this->_uid);
@@ -107,7 +114,6 @@ class files extends c\FileManager {
 						$this->_modelFolders->updateFoldersSize($folder_id, $this->_modelFiles->size);
 						// Remove the file from Redis because the status is now complete
 						$this->redis->del('token:'.$this->_token.':folder:'.$folder_id.':'.$filename);
-					}
 				}
 			}
 		} else {
