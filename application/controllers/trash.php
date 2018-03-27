@@ -11,6 +11,38 @@ class trash extends l\Controller {
             'mustBeLogged' => true
         ]);
     }
+	
+	public function fromAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$resp['token'] = $this->_token;
+
+		if($method === 'post') {
+			$resp = $this->mv($resp, false);
+		} else {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+	}
+	
+	public function toAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$resp['token'] = $this->_token;
+
+		if($method === 'post') {
+			$resp = $this->mv($resp, true);
+		} else {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+	}
 
 	private function mv($resp, $toTrash = true) {
 		$data = h\httpMethodsData::getValues();
@@ -41,17 +73,7 @@ class trash extends l\Controller {
 	public function DefaultAction() {
 		header("Content-type: application/json");
 		$resp = self::RESP;
-		$method = h\httpMethodsData::getMethod();
 		$resp['token'] = $this->_token;
-
-		if($method === 'post') {
-			$resp = $this->mv($resp, true);
-		} elseif($method === 'delete') {
-			$resp = $this->mv($resp, false);
-		} else {
-			$resp['code'] = 405; // Method Not Allowed
-		}
-
 		http_response_code($resp['code']);
 		echo json_encode($resp);
 	}
