@@ -140,6 +140,23 @@ class Controller {
 		return \Firebase\JWT\JWT::encode($data, $secretKey, 'HS384');
 	}
 
+  public function getTokens($userId) {
+    $tokens = [];
+    if($uidTokens = $this->redis->get('uid:'.$userId)) {
+      $uidTokens = substr($uidTokens, -1) === ';' ? substr($uidTokens, 0, -1) : $uidTokens;
+			$uidTokens = explode(';', $uidTokens);
+      foreach($uidTokens as $jti) {
+        if($iat = $this->redis->get('token:'.$jti.':iat')) {
+          $tokens[] = ['jti' => $jti, 'iat' => $iat];
+        }
+      }
+      usort($tokens, function($a, $b) {
+        return $a['iat'] < $b['iat'];
+      });
+    }
+    return $tokens;
+  }
+
 	public function removeToken($jti, $userId) {
 		if($uidTokens = $this->redis->get('uid:'.$userId)) {
 			$uidTokens = str_replace($jti.';', '', $uidTokens);

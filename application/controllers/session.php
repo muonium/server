@@ -80,6 +80,51 @@ class session extends l\Controller {
 		echo json_encode($resp);
     }
 
+  public function jtiAction($jti) { // Delete session $jti for current user
+    header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+
+    if($method !== 'delete') {
+			$resp['code'] = 405; // Method Not Allowed
+    } elseif($this->isLogged() === true) {
+      $jti = str_replace(':', '', $jti);
+      $this->removeToken($jti, $this->_uid);
+      $resp['code'] = 200;
+  		$resp['status'] = 'success';
+      if($jti === $this->_token) {
+        $resp['message'] = 'removeToken';
+      } else {
+        $resp['token'] = $this->_token;
+      }
+    } else {
+      $resp['message'] = 'emptyField';
+    }
+
+    http_response_code($resp['code']);
+		echo json_encode($resp);
+  }
+
+  public function allAction() { // Delete all sessions for current user
+    header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+
+    if($method !== 'delete') {
+			$resp['code'] = 405; // Method Not Allowed
+		} elseif($this->isLogged() === true) {
+      $this->removeTokens($this->_uid);
+      $resp['code'] = 200;
+  		$resp['status'] = 'success';
+      $resp['message'] = 'removeToken';
+    } else {
+      $resp['message'] = 'emptyField';
+    }
+
+    http_response_code($resp['code']);
+		echo json_encode($resp);
+  }
+
 	private function login($resp) {
 		sleep(2);
 		$data = h\httpMethodsData::getValues();
@@ -190,6 +235,7 @@ class session extends l\Controller {
 		$resp['status'] = 'success';
 		$resp['token'] = $this->_token; // Send it in the response because a new one could be generated when verifying
 		$resp['data']['uid'] = $this->_uid;
+    $resp['data']['tokens'] = $this->getTokens($this->_uid);
 		return $resp;
 	}
 
