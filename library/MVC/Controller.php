@@ -187,7 +187,7 @@ class Controller {
 				}
 			}
 		}
-		return $this->redis->del('uid:'.$userId);
+		return $removeCurrent ? $this->redis->del('uid:'.$userId) : $this->redis->set('uid:'.$userId, $this->decoded['jti'].';');
 	}
 
 	public function verifyToken($token, $auto_generate = true) {
