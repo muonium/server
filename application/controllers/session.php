@@ -113,7 +113,7 @@ class session extends l\Controller {
     if($method !== 'delete') {
 			$resp['code'] = 405; // Method Not Allowed
 		} elseif($this->isLogged() === true) {
-      $this->removeTokens($this->_uid);
+      $this->removeTokens($this->_uid, false);
       $resp['code'] = 200;
   		$resp['status'] = 'success';
       $resp['message'] = 'removeToken';

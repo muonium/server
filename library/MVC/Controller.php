@@ -147,11 +147,13 @@ class Controller {
 			$uidTokens = explode(';', $uidTokens);
       foreach($uidTokens as $jti) {
         if($iat = $this->redis->get('token:'.$jti.':iat')) {
-          $tokens[] = ['jti' => $jti, 'iat' => $iat];
+          $tokens[] = ['jti' => $jti, 'iat' => $iat, 'current' => ($jti === $this->_token)];
         }
       }
       usort($tokens, function($a, $b) {
-        return $a['iat'] < $b['iat'];
+        $c = $b['current'] - $a['current'];
+        if ($c !== 0) return $c;
+        return ($a['iat'] < $b['iat']) ? 1 : -1;
       });
     }
     return $tokens;
@@ -173,11 +175,12 @@ class Controller {
 		return true;
 	}
 
-	public function removeTokens($userId) {
+	public function removeTokens($userId, $removeCurrent = true) {
 		if($uidTokens = $this->redis->get('uid:'.$userId)) {
 			$uidTokens = substr($uidTokens, -1) === ';' ? substr($uidTokens, 0, -1) : $uidTokens;
 			$uidTokens = explode(';', $uidTokens);
 			foreach($uidTokens as $jti) {
+        if(!$removeCurrent && $jti === $this->_token) continue;
 				$keys = $this->redis->keys('token:'.$jti.'*');
 				foreach($keys as $key) {
 					$this->redis->del($key);
