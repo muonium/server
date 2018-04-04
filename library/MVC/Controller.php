@@ -147,7 +147,7 @@ class Controller {
 			$uidTokens = explode(';', $uidTokens);
       foreach($uidTokens as $jti) {
         if($iat = $this->redis->get('token:'.$jti.':iat')) {
-          $tokens[] = ['jti' => $jti, 'iat' => $iat, 'current' => ($jti === $this->_token)];
+          $tokens[] = ['jti' => $jti, 'iat' => $iat, 'current' => ($jti === $this->decoded['jti'])];
         }
       }
       usort($tokens, function($a, $b) {
@@ -180,7 +180,7 @@ class Controller {
 			$uidTokens = substr($uidTokens, -1) === ';' ? substr($uidTokens, 0, -1) : $uidTokens;
 			$uidTokens = explode(';', $uidTokens);
 			foreach($uidTokens as $jti) {
-        if(!$removeCurrent && $jti === $this->_token) continue;
+        if(!$removeCurrent && $jti === $this->decoded['jti']) continue;
 				$keys = $this->redis->keys('token:'.$jti.'*');
 				foreach($keys as $key) {
 					$this->redis->del($key);
