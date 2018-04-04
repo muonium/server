@@ -105,7 +105,7 @@ class session extends l\Controller {
 		echo json_encode($resp);
   }
 
-  public function allAction() { // Delete all sessions for current user
+  public function allAction() { // Delete all sessions (except current) for current user
     header("Content-type: application/json");
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
@@ -116,7 +116,6 @@ class session extends l\Controller {
       $this->removeTokens($this->_uid, false);
       $resp['code'] = 200;
   		$resp['status'] = 'success';
-      $resp['message'] = 'removeToken';
     } else {
       $resp['message'] = 'emptyField';
     }
