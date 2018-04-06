@@ -119,7 +119,7 @@ class user extends l\Controller {
 		/*
 			- receive the new base64encoded encrypted CEK
 			- store it in the database
-			- DO NOT FORGET: THE PASSPHRASE MUST NOT BE SENT TO THE SERVERS!!!!!
+			- DO NOT FORGET: THE PASSPHRASE MUST NOT BE SENT TO THE SERVER!
 			- keep the cek as an urlencoded string, it's urldecoded at the frontend anyway
 		*/
 		header("Content-type: application/json");
@@ -267,11 +267,11 @@ class user extends l\Controller {
 
 								$this->_mail = new l\Mail();
 								$this->_mail->_to = htmlspecialchars($data->mail);
-								$this->_mail->_subject = self::$txt->Register->subject;
+								$this->_mail->_subject = self::$txt->Validate->subject;
 								$this->_mail->_message = str_replace(
 									["[id_user]", "[key]", "[url_app]"],
 									[$uid, $key, URL_APP],
-									self::$txt->Register->message
+									self::$txt->Validate->message
 								);
 								$this->_mail->send();
 

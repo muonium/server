@@ -89,11 +89,11 @@ class validate extends l\Controller {
 	                    $this->_mail = new l\Mail();
 						$this->_mail->delay(60, $this->uid, $this->redis, 'validate');
 	                    $this->_mail->_to = $user_mail;
-	                    $this->_mail->_subject = self::$txt->Register->subject;
+	                    $this->_mail->_subject = self::$txt->Validate->subject;
 	                    $this->_mail->_message = str_replace(
 	                        array("[id_user]", "[key]", "[url_app]"),
 	                        array($this->uid, $key, URL_APP),
-	                        self::$txt->Register->message
+	                        self::$txt->Validate->message
 	                    );
 
 	                    $resp['message'] = $this->_mail->send(); // 'sent' or 'wait'
