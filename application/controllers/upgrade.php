@@ -49,7 +49,7 @@ class upgrade extends l\Controller {
 						'currency' => strtolower($plan['currency']),
 						'amountf' => floatval($plan['price']),
 						'ipn_url' => $ipn_url,
-						'success_url' => URL_APP.'/upgrade/?success=ok',
+						'success_url' => URL_APP.'/#/upgrade/?success=ok',
 						'cancel_url' => '',
 						'custom'  => $this->_uid,
 						'want_shipping' => '0'

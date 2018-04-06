@@ -196,7 +196,7 @@ class folders extends c\FileManager {
 				$f['is_completed'] = $file['size'] < 0 ? false : true;
 				$f['size'] = $f['is_completed'] ? $file['size'] : @filesize(NOVA.'/'.$this->_uid.'/'.$fpath.'/'.$file['name']);
 				$f['lastmod'] = $file['last_modification'];
-				$f['url'] = URL_APP.'/dl/?'.setURL($file['id']);
+				$f['url'] = URL_APP.'/#/dl/'.setURL($file['id']);
 				$resp['data']['files'][] = $f;
             }
         }

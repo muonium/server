@@ -19,8 +19,10 @@ define('VERSION', '2018.03.08.0');
 define('DS', DIRECTORY_SEPARATOR);
 define('ROOT', __DIR__);
 define('MVC_ROOT', str_replace('/index.php', '', $_SERVER['SCRIPT_NAME']));
-define('URL_APP', $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['SERVER_NAME'] . MVC_ROOT);
 define('NOVA', dirname(dirname(__FILE__)).'/nova');
+define('URL_SERVER', $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['SERVER_NAME'] . MVC_ROOT);
+// Webclient
+define('URL_APP', $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['SERVER_NAME'] . '/app');
 
 // Default controller
 define('DEFAULT_CONTROLLER', 'home');
