@@ -19,18 +19,6 @@ class Controller {
 	public $_token = null;
 	public $_uid = null;
 
-    // Available languages
-    public static $languages = [
-        'en' => 'English',
-		'de' => 'Deutsch',
-		'es' => 'Español',
-        'fr' => 'Français',
-        'it' => 'Italiano',
-		'pl' => 'Polskie',
-        'ru' => 'Русский',
-		'zh-cn' => '简体中文'
-    ];
-
 	// Default response (bad request)
 	const RESP = [
 		'code' => 400,
@@ -57,7 +45,7 @@ class Controller {
             }
         }
         // Get user language
-		$lang = !empty($_COOKIE['lang']) ? htmlspecialchars($_COOKIE['lang']) : DEFAULT_LANGUAGE;
+		$lang = isset($_SERVER['HTTP_CLIENT_LANGUAGE']) ? htmlspecialchars($_SERVER['HTTP_CLIENT_LANGUAGE']) : DEFAULT_LANGUAGE;
         self::loadLanguage($lang);
     }
 
