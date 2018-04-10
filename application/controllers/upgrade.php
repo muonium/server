@@ -116,6 +116,32 @@ class upgrade extends l\Controller {
 		echo json_encode($resp);
     }
     
+    public function cancelAction() {
+        header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$resp['token'] = $this->_token;
+        
+        if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+        else {
+            $resp['code'] = 200;
+            $resp['status'] = 'success';
+            if($this->_modelUserStoragePlans->hasSubscriptionActive($this->_uid)) {
+                $this->_modelUserStoragePlans->cancelSubscription($this->_uid);
+                $resp['data']['canceled'] = 'true';
+            } else {
+                $resp['data']['canceled'] = 'false';
+
+            }
+        }
+        
+        http_response_code($resp['code']);
+		echo json_encode($resp);
+    }
+    
     public function hasSubscriptionEndedAction() {
         header("Content-type: application/json");
 		$resp = self::RESP;
