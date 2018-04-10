@@ -36,6 +36,8 @@ class confDB {
 ```
 6. Do the same for server/config/confMail.php, for server/config/confPayments.php and for server/config/secretKey.php
 
+7. Create a folder `public`, clone the [translations](https://github.com/muonium/translations), extract the `webclient` folder to `public` and rename it as `translations`.
+
 PS: enable mod_rewrite
 
 # Documentation
