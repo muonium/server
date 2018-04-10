@@ -11,7 +11,7 @@ class upgrade extends l\Controller {
 
     function __construct() {
         parent::__construct([
-            'mustBeLogged' => true
+            'mustBeLogged' => false
         ]);
 		$this->_modelUpgrade = new m\Upgrade($this->_uid);
 		$this->_modelStoragePlans = new m\StoragePlans();

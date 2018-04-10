@@ -2,7 +2,7 @@
 namespace application\models;
 use \library\MVC as l;
 
-class Upgrade extends l\Model {
+class UserStoragePlans extends l\Model {
     /* upgrade table
         1	id              int(11)			AUTO_INCREMENT
         2	id_user         int(11)
