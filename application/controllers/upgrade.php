@@ -102,10 +102,10 @@ class upgrade extends l\Controller {
         else {
             $resp['code'] = 200;
             $resp['status'] = 'success';
-            if($this->_modelUpgrade->canSubscribe($data->id_user)) {
+            if($this->_modelUpgrade->canSubscribe($this->_uid)) {
                 $resp['data']['can_subscribe'] = 'true';
                 $upgradeInfos = $this->_modelUpgrade->getInfosStorage($data->storage_plans);
-                $this->_modelUpgrade->addUpgrade($upgradeInfos['size'], $upgradeInfos['price'], $upgradeInfos['currency'], $upgradeInfos['duration'], $data->txn_id, $data->id_user);
+                $this->_modelUpgrade->addUpgrade($upgradeInfos['size'], $upgradeInfos['price'], $upgradeInfos['currency'], $upgradeInfos['duration'], $data->txn_id, $this->_uid);
             } else {
                 $resp['data']['can_subscribe'] = 'false';
             }
@@ -128,10 +128,10 @@ class upgrade extends l\Controller {
         else {
             $resp['code'] = 200;
             $resp['status'] = 'success';
-            if(!$this->_modelUpgrade->hasExpired($data->id_user)) {
+            if(!$this->_modelUpgrade->hasExpired($this->_uid)) {
 				$resp['data']['expired'] = 'false';
-                if($this->_modelUpgrade->expiresSoon($data->id_user)) {
-                    $daysLeft = $this->_modelUpgrade->getDaysLeft($data->id_user);
+                if($this->_modelUpgrade->expiresSoon($this->_uid)) {
+                    $daysLeft = $this->_modelUpgrade->getDaysLeft($this->_uid);
 				    $resp['data']['expires_soon'] = 'true';
                     $resp['data']['days_left'] = $daysLeft;
                 } else {
