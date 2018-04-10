@@ -158,7 +158,7 @@ class folders extends c\FileManager {
 		$path_d = explode('/', $path);
 
 		$resp['data']['path']    = $path;
-		$resp['data']['title']   = $path === '' ? self::$txt->Global->home : end($path_d);
+		$resp['data']['title']   = $path === '' ? null : end($path_d);
 		$resp['data']['stored']  = $stored;
 		$resp['data']['quota']   = $quota;
 		$resp['data']['folders'] = [];
