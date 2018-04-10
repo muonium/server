@@ -39,13 +39,6 @@ class Upgrade extends l\Model {
 		return false;
 	}
     
-    function canSubscribe($id_user) {
-        $req = self::$_sql->prepare("SELECT id FROM upgrade WHERE id_user = ?");
-		$req->execute([$id_user]);
-		if($req->rowCount() > 0) return false;
-		return true;
-    }
-    
     function getDaysLeft($id_user) {
         $req = self::$_sql->prepare("SELECT * FROM upgrade WHERE id_user = ? AND removed = 0");
         $req->execute([$user_id]);
@@ -79,6 +72,9 @@ class Upgrade extends l\Model {
         
         $req = self::$_sql->prepare("UPDATE storage SET user_quota = user_quota-? WHERE id_user = ?");
         $req->execute([$storage_size, $user_id]);
+        
+        $req = self::$_sql->prepare("DELETE FROM user_storage_plans WHERE id_user = ?");
+        $req->execute([$user_id]);
     }
     
 	function addUpgrade($size, $price, $currency, $duration, $txn_id, $user_id = null) {

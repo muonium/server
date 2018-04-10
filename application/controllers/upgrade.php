@@ -15,6 +15,7 @@ class upgrade extends l\Controller {
         ]);
 		$this->_modelUpgrade = new m\Upgrade($this->_uid);
 		$this->_modelStoragePlans = new m\StoragePlans();
+		$this->_modelUserStoragePlans = new m\UserStoragePlans();
     }
 
     public function plansAction() {
@@ -78,7 +79,7 @@ class upgrade extends l\Controller {
         else {
             $resp['code'] = 200;
             $resp['status'] = 'success';
-            if($this->_modelUpgrade->canSubscribe($this->_uid)) {
+            if(!($this->_modelUserStoragePlans->hasSubscriptionActive($this->_uid))) {
                 $resp['data']['can_subscribe'] = 'true';
             } else {
                 $resp['data']['can_subscribe'] = 'false';
@@ -89,8 +90,8 @@ class upgrade extends l\Controller {
 		echo json_encode($resp);
     }
     
-    public function subscribeStoragePlanAction() {
-		header("Content-type: application/json");
+    public function hasSubscriptionActiveAction() {
+        header("Content-type: application/json");
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
 		$data = h\httpMethodsData::getValues();
@@ -102,12 +103,12 @@ class upgrade extends l\Controller {
         else {
             $resp['code'] = 200;
             $resp['status'] = 'success';
-            if($this->_modelUpgrade->canSubscribe($this->_uid)) {
-                $resp['data']['can_subscribe'] = 'true';
-                $upgradeInfos = $this->_modelUpgrade->getInfosStorage($data->storage_plans);
-                $this->_modelUpgrade->addUpgrade($upgradeInfos['size'], $upgradeInfos['price'], $upgradeInfos['currency'], $upgradeInfos['duration'], $data->txn_id, $this->_uid);
+            if($this->_modelUserStoragePlans->hasSubscriptionActive($this->_uid)) {
+                $id_storage_plan = $this->_modelUserStoragePlans->getActiveSubscription($this->_uid)
+                $resp['data']['subscribed'] = 'true';
+                $resp['data']['id_storage_plan'] = $id_storage_plan;
             } else {
-                $resp['data']['can_subscribe'] = 'false';
+                $resp['data']['subscribed'] = 'false';
             }
         }
         
