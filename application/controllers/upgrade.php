@@ -15,7 +15,6 @@ class upgrade extends l\Controller {
         ]);
 		$this->_modelUpgrade = new m\Upgrade($this->_uid);
 		$this->_modelStoragePlans = new m\StoragePlans();
-		$this->_modelUserStoragePlans = new m\UserStoragePlans();
     }
 
     public function plansAction() {
@@ -103,8 +102,8 @@ class upgrade extends l\Controller {
         else {
             $resp['code'] = 200;
             $resp['status'] = 'success';
-            if($this->_modelUserStoragePlans->hasSubscriptionActive($this->_uid)) {
-                $id_storage_plan = $this->_modelUserStoragePlans->getActiveSubscription($this->_uid);
+            if($this->_modelUpgrade->hasSubscriptionActive($this->_uid)) {
+                $id_storage_plan = $this->_modelUpgrade->getActiveSubscription($this->_uid);
                 $resp['data']['subscribed'] = 'true';
                 $resp['data']['id_storage_plan'] = $id_storage_plan;
             } else {
@@ -129,8 +128,8 @@ class upgrade extends l\Controller {
         else {
             $resp['code'] = 200;
             $resp['status'] = 'success';
-            if($this->_modelUserStoragePlans->hasSubscriptionActive($this->_uid)) {
-                $this->_modelUserStoragePlans->cancelSubscription($this->_uid);
+            if($this->_modelUpgrade->hasSubscriptionActive($this->_uid)) {
+                $this->_modelUpgrade->cancelSubscription($this->_uid);
                 $resp['data']['canceled'] = 'true';
             } else {
                 $resp['data']['canceled'] = 'false';

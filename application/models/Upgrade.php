@@ -74,8 +74,6 @@ class Upgrade extends l\Model {
         $req->execute([$storage_size, $user_id]);
     }
     
-    
-    
     function cancelSubscription($id_user) {
         $req = self::$_sql->prepare("SELECT * FROM upgrade WHERE id_user = ? AND removed = 0");
         $req->execute([$id_user]);
