@@ -4,6 +4,7 @@
 - Composer
 - HTTPD Apache, 2.4 preferred
 - PHP 5.6 / 7.0+
+- PHP mcrypt extension
 
 # Installation
 Follow these steps to install Muonium's server API.
