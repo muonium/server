@@ -24,12 +24,4 @@ class StoragePlans extends l\Model {
 	function getPlans() {
 		return $this->plans;
 	}
-    
-    function getDuration($id_storage_plan) {
-        $req = self::$_sql->prepare("SELECT duration FROM storage_plans WHERE id = ?");
-		$req->execute([$id_storage_plan]);
-		if($req->rowCount() === 0) return false;
-        $res = $req->fetch(\PDO::FETCH_ASSOC);
-        return $res['duration'];
-    }
 }
