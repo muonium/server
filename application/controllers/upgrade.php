@@ -104,7 +104,7 @@ class upgrade extends l\Controller {
             $resp['code'] = 200;
             $resp['status'] = 'success';
             if($this->_modelUserStoragePlans->hasSubscriptionActive($this->_uid)) {
-                $id_storage_plan = $this->_modelUserStoragePlans->getActiveSubscription($this->_uid)
+                $id_storage_plan = $this->_modelUserStoragePlans->getActiveSubscription($this->_uid);
                 $resp['data']['subscribed'] = 'true';
                 $resp['data']['id_storage_plan'] = $id_storage_plan;
             } else {
