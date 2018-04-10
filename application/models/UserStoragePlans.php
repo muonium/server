@@ -29,10 +29,10 @@ class Upgrade extends l\Model {
 		return false;
     }
     function getActiveSubscription($id_user) {
-        $req = self::$_sql->prepare("SELECT * FROM user_storage_plans WHERE id_user = ? AND removed = 0");
+        $req = self::$_sql->prepare("SELECT * FROM user_storage_plans WHERE id_user = ?");
         $req->execute([$user_id]);
-        if($req->rowCount() > 0) return false;
+        if($req->rowCount() > 0) return null;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
-        return floor(($res['end'] - time())/(7 * 24 * 60 * 60));
+        return $res['id_storage_plan'];
     }
 }
