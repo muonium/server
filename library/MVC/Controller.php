@@ -156,10 +156,12 @@ class Controller {
 				$this->redis->del('uid:'.$userId);
 			}
 		}
-		$keys = $this->redis->keys('token:'.$jti.'*');
-		foreach($keys as $key) {
-			$this->redis->del($key);
-		}
+    if($this->redis->get('token:'.$jti.':uid') == $userId) {
+  		$keys = $this->redis->keys('token:'.$jti.'*');
+  		foreach($keys as $key) {
+  			$this->redis->del($key);
+  		}
+    }
 		return true;
 	}
 
