@@ -32,6 +32,7 @@ class upgrade extends l\Controller {
 			$resp['status'] = 'success';
 
 			$resp['data']['endpoint'] = 'https://www.coinpayments.net/index.php';
+			$resp['data']['endpoint'] = 'https://www.coinpayments.net/index.php';
 			$resp['data']['plans'] = [];
 			$merchant_id = conf\confPayments::merchant_id;
 			$ipn_url = conf\confPayments::ipn_url;
@@ -63,7 +64,88 @@ class upgrade extends l\Controller {
 		http_response_code($resp['code']);
 		echo json_encode($resp);
     }
+    
+    public function canSubscribeAction() {
+        header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$resp['token'] = $this->_token;
 
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+        else {
+            $resp['code'] = 200;
+            $resp['status'] = 'success';
+            if($this->_modelUpgrade->canSubscribe($this->_uid)) {
+                $resp['data']['can_subscribe'] = 'true';
+            } else {
+                $resp['data']['can_subscribe'] = 'false';
+            }
+        }
+        
+        http_response_code($resp['code']);
+		echo json_encode($resp);
+    }
+    
+    public function subscribeStoragePlanAction() {
+		header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$resp['token'] = $this->_token;
+
+		if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+        else {
+            $resp['code'] = 200;
+            $resp['status'] = 'success';
+            if($this->_modelUpgrade->canSubscribe($data->id_user)) {
+                $resp['data']['can_subscribe'] = 'true';
+                $upgradeInfos = $this->_modelUpgrade->getInfosStorage($data->storage_plans);
+                $this->_modelUpgrade->addUpgrade($upgradeInfos['size'], $upgradeInfos['price'], $upgradeInfos['currency'], $upgradeInfos['duration'], $data->txn_id, $data->id_user);
+            } else {
+                $resp['data']['can_subscribe'] = 'false';
+            }
+        }
+        
+        http_response_code($resp['code']);
+		echo json_encode($resp);
+    }
+    
+    public function hasSubscriptionEndedAction() {
+        header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+		$resp['token'] = $this->_token;
+        
+        if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+        else {
+            $resp['code'] = 200;
+            $resp['status'] = 'success';
+            if(!$this->_modelUpgrade->hasExpired($data->id_user)) {
+				$resp['data']['expired'] = 'false';
+                if($this->_modelUpgrade->expiresSoon($data->id_user)) {
+                    $daysLeft = $this->_modelUpgrade->getDaysLeft($data->id_user);
+				    $resp['data']['expires_soon'] = 'true';
+                    $resp['data']['days_left'] = $daysLeft;
+                } else {
+				    $resp['data']['expires_soon'] = 'false';
+                }
+            } else {
+				$resp['data']['expired'] = 'true';
+            }
+        }
+        
+        http_response_code($resp['code']);
+		echo json_encode($resp);
+    }
+    
 	public function historyAction() {
 		header("Content-type: application/json");
 		$resp = self::RESP;
@@ -75,18 +157,18 @@ class upgrade extends l\Controller {
 			$resp['code'] = 405; // Method Not Allowed
 		}
 		else {
-      $upgrades = [];
-			if($upgrades = $this->_modelUpgrade->getUpgrades()) {
-				foreach($upgrades as $i => $upgrade) {
-					unset($upgrade['id']);
-					unset($upgrade['id_user']);
-					$upgrade['currency_symbol'] = currencySymbol($upgrade['currency']);
-					$upgrades[$i] = $upgrade;
-				}
-			}
-      $resp['code'] = 200;
-      $resp['status'] = 'success';
-      $resp['data'] = $upgrades;
+            $upgrades = [];
+            if($upgrades = $this->_modelUpgrade->getUpgrades()) {
+                foreach($upgrades as $i => $upgrade) {
+                    unset($upgrade['id']);
+                    unset($upgrade['id_user']);
+                    $upgrade['currency_symbol'] = currencySymbol($upgrade['currency']);
+                    $upgrades[$i] = $upgrade;
+                }
+            }
+            $resp['code'] = 200;
+            $resp['status'] = 'success';
+            $resp['data'] = $upgrades;
 		}
 
 		http_response_code($resp['code']);

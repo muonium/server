@@ -38,9 +38,51 @@ class Upgrade extends l\Model {
 		if($req->rowCount() > 0) return true;
 		return false;
 	}
+    
+    function canSubscribe($id_user) {
+        $req = self::$_sql->prepare("SELECT id FROM upgrade WHERE id_user = ?");
+		$req->execute([$id_user]);
+		if($req->rowCount() > 0) return false;
+		return true;
+    }
+    
+    function getDaysLeft($id_user) {
+        $req = self::$_sql->prepare("SELECT * FROM upgrade WHERE id_user = ? AND removed = 0");
+        $req->execute([$user_id]);
+        if($req->rowCount() > 0) return false;
+        $res = $req->fetch(\PDO::FETCH_ASSOC);
+        return floor(($res['end'] - time())/(7 * 24 * 60 * 60));
+    }
+    
+    function expiresSoon($id_user) {
+        $req = self::$_sql->prepare("SELECT * FROM upgrade WHERE id_user = ? AND removed = 0");
+        $req->execute([$user_id]);
+        if($req->rowCount() > 0) return false;
+        $res = $req->fetch(\PDO::FETCH_ASSOC);
+        if($res['end'] < (time() - 7 * 24 * 60 * 60)) return false;
+        return true;
+    }
+    
+    function hasExpired($id_user) {
+        $req = self::$_sql->prepare("SELECT * FROM upgrade WHERE id_user = ? AND removed = 0");
+        $req->execute([$user_id]);
+        if($req->rowCount() > 0) return false;
+        $res = $req->fetch(\PDO::FETCH_ASSOC);
+        if($res['end'] < time()) return false;
+        $this->expires($res['id'], $id_user, $res['size']);
+        return true;
+    }
 
+    function expires($id_plan, $id_user, $storage_size) {
+        $req = self::$_sql->prepare("UPDATE upgrade SET removed = 1 WHERE id = ? AND removed = 0");
+        $req->execute([$id_plan]);
+        
+        $req = self::$_sql->prepare("UPDATE storage SET user_quota = user_quota-? WHERE id_user = ?");
+        $req->execute([$storage_size, $user_id]);
+    }
+    
 	function addUpgrade($size, $price, $currency, $duration, $txn_id, $user_id = null) {
-		// $duration in months, -1 = lifetime
+		//$duration in months, -1 = lifetime
 		$user_id = $user_id === null ? $this->id_user : $user_id;
 		if($user_id === null) return false;
 
