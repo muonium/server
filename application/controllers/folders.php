@@ -150,8 +150,8 @@ class folders extends c\FileManager {
         $stored = $this->_modelStorage->getSizeStored();
 
 		if($quota !== false && $stored !== false) {
-			$this->redis->set('token:'.$this->_token.':user_quota', $quota);
-			$this->redis->set('token:'.$this->_token.':size_stored', $stored);
+			$this->redis->set('token:'.$this->_jti.':user_quota', $quota);
+			$this->redis->set('token:'.$this->_jti.':size_stored', $stored);
 		}
 
 		$path = htmlspecialchars($this->_modelFolders->getFullPath($this->_folderId));
