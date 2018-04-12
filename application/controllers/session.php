@@ -88,7 +88,7 @@ class session extends l\Controller {
     if($method !== 'delete') {
 			$resp['code'] = 405; // Method Not Allowed
     } elseif($this->isLogged() === true) {
-      $jti = str_replace(':', '', urldecode($jti));
+      $jti = str_replace(['-', '_', ':'], ['+', '/', ''], $jti);
       $this->removeToken($jti, $this->_uid);
       $resp['code'] = 200;
   		$resp['status'] = 'success';
