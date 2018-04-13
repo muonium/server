@@ -173,7 +173,9 @@ class session extends l\Controller {
                                 $mail->_to = $email;
                                 $mail->_subject = "Muonium - ".self::$txt->Profile->doubleAuth;
                                 $mail->_message = str_replace("[key]", $code, self::$txt->Login->doubleAuthMessage);
-                                $resp['data'] = $id;
+                                $resp['data'] = [];
+                                $resp['data']['cek'] = $cek; // the CEK is already url encoded in the database
+                                $resp['data']['uid'] = $id;
                                 if($mail->send() === 'wait') {
 									$resp['message'] = 'wait';
 								} else {
