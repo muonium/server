@@ -32,7 +32,6 @@ class upgrade extends l\Controller {
 			$resp['status'] = 'success';
 
 			$resp['data']['endpoint'] = 'https://www.coinpayments.net/index.php';
-			$resp['data']['endpoint'] = 'https://www.coinpayments.net/index.php';
 			$resp['data']['plans'] = [];
 			$merchant_id = conf\confPayments::merchant_id;
 			$ipn_url = conf\confPayments::ipn_url;
@@ -64,12 +63,11 @@ class upgrade extends l\Controller {
 		http_response_code($resp['code']);
 		echo json_encode($resp);
     }
-    
+
     public function canSubscribeAction() {
         header("Content-type: application/json");
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
-		$data = h\httpMethodsData::getValues();
 		$resp['token'] = $this->_token;
 
 		if($method !== 'post') {
@@ -79,21 +77,20 @@ class upgrade extends l\Controller {
             $resp['code'] = 200;
             $resp['status'] = 'success';
             if(!($this->_modelUserStoragePlans->hasSubscriptionActive($this->_uid))) {
-                $resp['data']['can_subscribe'] = 'true';
+                $resp['data']['can_subscribe'] = true;
             } else {
-                $resp['data']['can_subscribe'] = 'false';
+                $resp['data']['can_subscribe'] = false;
             }
         }
-        
+
         http_response_code($resp['code']);
 		echo json_encode($resp);
     }
-    
+
     public function hasSubscriptionActiveAction() {
         header("Content-type: application/json");
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
-		$data = h\httpMethodsData::getValues();
 		$resp['token'] = $this->_token;
 
 		if($method !== 'post') {
@@ -104,24 +101,23 @@ class upgrade extends l\Controller {
             $resp['status'] = 'success';
             if($this->_modelUpgrade->hasSubscriptionActive($this->_uid)) {
                 $id_storage_plan = $this->_modelUpgrade->getActiveSubscription($this->_uid);
-                $resp['data']['subscribed'] = 'true';
+                $resp['data']['subscribed'] = true;
                 $resp['data']['id_storage_plan'] = $id_storage_plan;
             } else {
-                $resp['data']['subscribed'] = 'false';
+                $resp['data']['subscribed'] = false;
             }
         }
-        
+
         http_response_code($resp['code']);
 		echo json_encode($resp);
     }
-    
+
     public function cancelAction() {
         header("Content-type: application/json");
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
-		$data = h\httpMethodsData::getValues();
 		$resp['token'] = $this->_token;
-        
+
         if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
@@ -130,24 +126,22 @@ class upgrade extends l\Controller {
             $resp['status'] = 'success';
             if($this->_modelUpgrade->hasSubscriptionActive($this->_uid)) {
                 $this->_modelUpgrade->cancelSubscription($this->_uid);
-                $resp['data']['canceled'] = 'true';
+                $resp['data']['canceled'] = true;
             } else {
-                $resp['data']['canceled'] = 'false';
-
+                $resp['data']['canceled'] = false;
             }
         }
-        
+
         http_response_code($resp['code']);
 		echo json_encode($resp);
     }
-    
+
     public function hasSubscriptionEndedAction() {
         header("Content-type: application/json");
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
-		$data = h\httpMethodsData::getValues();
 		$resp['token'] = $this->_token;
-        
+
         if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
@@ -155,23 +149,23 @@ class upgrade extends l\Controller {
             $resp['code'] = 200;
             $resp['status'] = 'success';
             if(!$this->_modelUpgrade->hasExpired($this->_uid)) {
-				$resp['data']['expired'] = 'false';
+				$resp['data']['expired'] = false;
                 if($this->_modelUpgrade->expiresSoon($this->_uid)) {
                     $daysLeft = $this->_modelUpgrade->getDaysLeft($this->_uid);
-				    $resp['data']['expires_soon'] = 'true';
+				    $resp['data']['expires_soon'] = true;
                     $resp['data']['days_left'] = $daysLeft;
                 } else {
-				    $resp['data']['expires_soon'] = 'false';
+				    $resp['data']['expires_soon'] = false;
                 }
             } else {
-				$resp['data']['expired'] = 'true';
+				$resp['data']['expired'] = true;
             }
         }
-        
+
         http_response_code($resp['code']);
 		echo json_encode($resp);
     }
-    
+
 	public function historyAction() {
 		header("Content-type: application/json");
 		$resp = self::RESP;

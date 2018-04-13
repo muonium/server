@@ -68,7 +68,7 @@ class ipn extends l\Controller {
 											if($user_mail !== false) {
 												$resp['code'] = 200;
 												$resp['status'] = 'success';
-                                                if($this->_modelUpgrade->hasSubscriptionActive($this->_uid)) {
+                                                if($this->_modelUpgrade->hasSubscriptionActive($user_id)) {
                                                     $this->_modelUpgrade->renewSubscription($size, $amount2, $currency2, $duration, $txn_id, $user_id);
 												    $resp['data']['status'] = 'renew';
                                                 } else {

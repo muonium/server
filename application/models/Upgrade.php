@@ -38,30 +38,30 @@ class Upgrade extends l\Model {
 		if($req->rowCount() > 0) return true;
 		return false;
 	}
-    
+
     function getDaysLeft($id_user) {
         $req = self::$_sql->prepare("SELECT * FROM upgrade WHERE id_user = ? AND removed = 0");
-        $req->execute([$user_id]);
+        $req->execute([$id_user]);
         if($req->rowCount() > 0) return false;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
-        return floor(($res['end'] - time())/(7 * 24 * 60 * 60));
+        return floor(($res['end'] - time())/(24 * 60 * 60));
     }
-    
+
     function expiresSoon($id_user) {
         $req = self::$_sql->prepare("SELECT * FROM upgrade WHERE id_user = ? AND removed = 0");
-        $req->execute([$user_id]);
+        $req->execute([$id_user]);
         if($req->rowCount() > 0) return false;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
-        if($res['end'] < (time() - 7 * 24 * 60 * 60)) return false;
+        if($res['end'] < (time() - (7 * 24 * 60 * 60))) return false;
         return true;
     }
-    
+
     function hasExpired($id_user) {
         $req = self::$_sql->prepare("SELECT * FROM upgrade WHERE id_user = ? AND removed = 0");
-        $req->execute([$user_id]);
+        $req->execute([$id_user]);
         if($req->rowCount() > 0) return false;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
-        if($res['end'] < time()) return false;
+        if($res['end'] > time()) return false;
         $this->expires($res['id'], $id_user, $res['size']);
         return true;
     }
@@ -69,58 +69,54 @@ class Upgrade extends l\Model {
     function expires($id_plan, $id_user, $storage_size) {
         $req = self::$_sql->prepare("UPDATE upgrade SET removed = 1 WHERE id = ? AND removed = 0");
         $req->execute([$id_plan]);
-        
+
         $req = self::$_sql->prepare("UPDATE storage SET user_quota = user_quota-? WHERE id_user = ?");
-        $req->execute([$storage_size, $user_id]);
+        $req->execute([$storage_size, $id_user]);
     }
-    
+
     function cancelSubscription($id_user) {
         $req = self::$_sql->prepare("SELECT * FROM upgrade WHERE id_user = ? AND removed = 0");
         $req->execute([$id_user]);
-        if($req->rowCount() == 0) $storage_size = 0;
+        if($req->rowCount() == 0) return false;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
         $storage_size = $res['size'];
-        
+
         $req = self::$_sql->prepare("UPDATE upgrade SET removed = 1 WHERE id_user = ? AND removed = 0");
         $req->execute([$id_user]);
-        
+
         $req = self::$_sql->prepare("UPDATE storage SET user_quota = user_quota-? WHERE id_user = ?");
-        $req->execute([$storage_size, $user_id]);
+        $req->execute([$storage_size, $id_user]);
     }
-    
+
     function hasSubscriptionActive($id_user) {
         $req = self::$_sql->prepare("SELECT id FROM upgrade WHERE id_user = ? AND removed = 0");
 		$req->execute([$id_user]);
-		if($req->rowCount() > 0) return true;
-		return false;
+		return ($req->rowCount() > 0);
     }
-    
+
     function getActiveSubscription($id_user) {
         $req = self::$_sql->prepare("SELECT * FROM upgrade WHERE id_user = ? AND removed = 0");
-        $req->execute([$user_id]);
+        $req->execute([$id_user]);
         if($req->rowCount() > 0) return null;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
-        return $res['id_storage_plan'];
+        return $res['id'];
     }
-    
-    function renewSubscription($size, $price, $currency, $duration, $txn_id) {
+
+    function renewSubscription($size, $price, $currency, $duration, $txn_id, $id_user) {
         $req = self::$_sql->prepare("SELECT * FROM upgrade WHERE id_user = ? AND removed = 0");
         $req->execute([$id_user]);
         if($req->rowCount() == 0) $old_end = time();
         $res = $req->fetch(\PDO::FETCH_ASSOC);
         $old_end = $res['end'];
-        
-        $req = self::$_sql->prepare("UPDATE upgrade SET end = ? WHERE id_user = ? AND removed = 0");
-        $req->execute([$end, $user_id]);
-        
-        $req = self::$_sql->prepare("UPDATE upgrade SET removed = 1 WHERE id_user = ? AND removed = 0");
-        $req->execute([$user_id]);
-        
+
+        $req = self::$_sql->prepare("UPDATE upgrade SET `end` = ?, removed = 1 WHERE id_user = ? AND removed = 0");
+        $req->execute([$end, $id_user]);
+
         $end = time() + ($old_end - time()); //get days left before renew
-        
+
         $insert = $this->insert('upgrade', [
 			'id' => null,
-			'id_user' => $this->_uid,
+			'id_user' => $id_user,
 			'txn_id' => $txn_id,
 			'size' => $size,
 			'price' => $price,
@@ -130,7 +126,7 @@ class Upgrade extends l\Model {
 			'removed' => 0
 		]);
     }
-    
+
 	function addUpgrade($size, $price, $currency, $duration, $txn_id, $user_id = null) {
 		//$duration in months, -1 = lifetime
 		$user_id = $user_id === null ? $this->id_user : $user_id;
