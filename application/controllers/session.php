@@ -26,7 +26,7 @@ class session extends l\Controller {
 		elseif($this->isLogged() === false) {
 			// User is not logged
 			if(isset($data->uid) && isset($data->password) && isset($data->code)) {
-				if(is_numeric($data->uid) && strlen($data->code) === 8) {
+				if(is_pos_digit($data->uid) && strlen($data->code) === 8) {
 					$user = new m\Users($data->uid);
 					$user->password = urldecode($data->password);
 					$pass = $user->getPassword();
@@ -50,7 +50,7 @@ class session extends l\Controller {
 								$resp['status'] = 'success';
 								$resp['token'] = $this->buildToken($data->uid);
 								$resp['data']['cek'] = $cek;
-                $resp['data']['uid'] = $id;
+                $resp['data']['uid'] = intval($data->uid);
 							} else {
 								// Wrong code
 								$resp['code'] = 401;
@@ -170,7 +170,7 @@ class session extends l\Controller {
                                 $new_user->updateCode($code);
                                 $mail = new l\Mail();
 								$mail->delay(60, $id, $this->getRedis());
-                                $mail->_to = $e;
+                                $mail->_to = $email;
                                 $mail->_subject = "Muonium - ".self::$txt->Profile->doubleAuth;
                                 $mail->_message = str_replace("[key]", $code, self::$txt->Login->doubleAuthMessage);
                                 $resp['data'] = $id;
@@ -183,6 +183,7 @@ class session extends l\Controller {
                             else { // Logged
 								$resp['token'] = $this->buildToken($id);
 							}
+                            $resp['data'] = [];
                             $resp['data']['cek'] = $cek; // the CEK is already url encoded in the database
                             $resp['data']['uid'] = $id;
                         }
