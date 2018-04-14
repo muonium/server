@@ -137,6 +137,8 @@ class user extends l\Controller {
 			if($this->_modelUser->updateCek()) { // try to update
 				$resp['code'] = 200;
 				$resp['status'] = 'success';
+        $resp['message'] = 'removeToken';
+        $resp['token'] = null;
 			}
 		}
 
