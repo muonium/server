@@ -135,6 +135,7 @@ class user extends l\Controller {
 			$this->_modelUser = new m\Users($this->_uid);
 			$this->_modelUser->cek = $data->cek;
 			if($this->_modelUser->updateCek()) { // try to update
+        $this->removeTokens($this->_uid);
 				$resp['code'] = 200;
 				$resp['status'] = 'success';
         $resp['message'] = 'removeToken';
