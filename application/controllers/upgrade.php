@@ -111,7 +111,7 @@ class upgrade extends l\Controller {
         http_response_code($resp['code']);
 		echo json_encode($resp);
     }
-
+    
     public function cancelAction() {
         header("Content-type: application/json");
 		$resp = self::RESP;
