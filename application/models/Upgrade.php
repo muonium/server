@@ -40,7 +40,7 @@ class Upgrade extends l\Model {
 	}
 
     function getDaysLeft($id_user) {
-        $req = self::$_sql->prepare("SELECT * FROM upgrade WHERE id_user = ? AND removed = 0");
+        $req = self::$_sql->prepare("SELECT `end` FROM upgrade WHERE id_user = ? AND removed = 0");
         $req->execute([$id_user]);
         if($req->rowCount() > 0) return false;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
@@ -48,7 +48,7 @@ class Upgrade extends l\Model {
     }
 
     function expiresSoon($id_user) {
-        $req = self::$_sql->prepare("SELECT * FROM upgrade WHERE id_user = ? AND removed = 0");
+        $req = self::$_sql->prepare("SELECT `end` FROM upgrade WHERE id_user = ? AND removed = 0");
         $req->execute([$id_user]);
         if($req->rowCount() > 0) return false;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
@@ -95,7 +95,7 @@ class Upgrade extends l\Model {
     }
 
     function getActiveSubscription($id_user) {
-        $req = self::$_sql->prepare("SELECT * FROM upgrade WHERE id_user = ? AND removed = 0");
+        $req = self::$_sql->prepare("SELECT id FROM upgrade WHERE id_user = ? AND removed = 0");
         $req->execute([$id_user]);
         if($req->rowCount() > 0) return null;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
@@ -103,21 +103,21 @@ class Upgrade extends l\Model {
     }
 
     function renewSubscription($size, $price, $currency, $duration, $txn_id, $id_user) {
-        $req = self::$_sql->prepare("SELECT * FROM upgrade WHERE id_user = ? AND removed = 0");
+        $req = self::$_sql->prepare("SELECT `end` FROM upgrade WHERE id_user = ? AND removed = 0");
         $req->execute([$id_user]);
-        if($req->rowCount() == 0)
-            $old_end = time();
-        else {
+        $now = time();
+        $old_end = $now;
+        if($req->rowCount() > 0) {
             $res = $req->fetch(\PDO::FETCH_ASSOC);
-            $old_end = $res['end'];
+            if($res['end'] !== -1) {
+                $old_end = $res['end'];
+            }
         }
-        
-        $new_end = ($duration === -1) ? -1 : strtotime("+".$duration." months", time());
-        
-        $end = time();
+
+        $new_end = ($duration === -1) ? -1 : strtotime("+".$duration." months", $old_end);
 
         $req = self::$_sql->prepare("UPDATE upgrade SET `end` = ?, removed = 1 WHERE id_user = ? AND removed = 0");
-        $req->execute([$end, $id_user]);
+        $req->execute([$now, $id_user]);
 
         $insert = $this->insert('upgrade', [
 			'id' => null,
@@ -126,7 +126,7 @@ class Upgrade extends l\Model {
 			'size' => $size,
 			'price' => $price,
 			'currency' => $currency,
-			'start' => $end,
+			'start' => $now,
 			'end' => $new_end,
 			'removed' => 0
 		]);
