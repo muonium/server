@@ -70,7 +70,7 @@ class upgrade extends l\Controller {
 		$method = h\httpMethodsData::getMethod();
 		$resp['token'] = $this->_token;
 
-		if($method !== 'post') {
+		if($method !== 'get') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
         else {
@@ -93,7 +93,7 @@ class upgrade extends l\Controller {
 		$method = h\httpMethodsData::getMethod();
 		$resp['token'] = $this->_token;
 
-		if($method !== 'post') {
+		if($method !== 'get') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
         else {
@@ -118,7 +118,7 @@ class upgrade extends l\Controller {
 		$method = h\httpMethodsData::getMethod();
 		$resp['token'] = $this->_token;
 
-        if($method !== 'post') {
+        if($method !== 'get') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
         else {
@@ -142,7 +142,7 @@ class upgrade extends l\Controller {
 		$method = h\httpMethodsData::getMethod();
 		$resp['token'] = $this->_token;
 
-        if($method !== 'post') {
+        if($method !== 'get') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
         else {
