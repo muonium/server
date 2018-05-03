@@ -40,9 +40,9 @@ class upgrade extends l\Controller {
 			foreach($storage_plans as $plan) {
 				if($plan['product_id'] !== null) {
 					$product_name = showSize($plan['size']).' - '.$plan['price'].' '.strtoupper($plan['currency']).' - '.$this->duration($plan['duration']);
-          $plan['size'] = intval($plan['size']);
-          $plan['price'] = floatval($plan['price']);
-          $plan['duration'] = intval($plan['duration']);
+					$plan['size'] = intval($plan['size']);
+					$plan['price'] = floatval($plan['price']);
+					$plan['duration'] = intval($plan['duration']);
 					$plan['currency_symbol'] = currencySymbol($plan['currency']);
 					$plan['fields'] = [
 						'cmd' => '_pay_simple',
@@ -79,7 +79,7 @@ class upgrade extends l\Controller {
         else {
             $resp['code'] = 200;
             $resp['status'] = 'success';
-            if(!($this->_modelUserStoragePlans->hasSubscriptionActive($this->_uid))) {
+            if(!($this->_modelUpgrade->hasSubscriptionActive($this->_uid))) {
                 $resp['data']['can_subscribe'] = true;
             } else {
                 $resp['data']['can_subscribe'] = false;
@@ -103,9 +103,9 @@ class upgrade extends l\Controller {
             $resp['code'] = 200;
             $resp['status'] = 'success';
             if($this->_modelUpgrade->hasSubscriptionActive($this->_uid)) {
-                $id_storage_plan = $this->_modelUpgrade->getActiveSubscription($this->_uid);
+                $id_upgrade = $this->_modelUpgrade->getActiveSubscription($this->_uid);
                 $resp['data']['subscribed'] = true;
-                $resp['data']['id_storage_plan'] = $id_storage_plan;
+                $resp['data']['id_upgrade'] = $id_upgrade;
             } else {
                 $resp['data']['subscribed'] = false;
             }
@@ -114,7 +114,7 @@ class upgrade extends l\Controller {
         http_response_code($resp['code']);
 		echo json_encode($resp);
     }
-    
+
     public function cancelAction() {
         header("Content-type: application/json");
 		$resp = self::RESP;
@@ -152,11 +152,11 @@ class upgrade extends l\Controller {
             $resp['code'] = 200;
             $resp['status'] = 'success';
             if(!$this->_modelUpgrade->hasExpired($this->_uid)) {
+				$daysLeft = $this->_modelUpgrade->getDaysLeft($this->_uid);
 				$resp['data']['expired'] = false;
+				$resp['data']['days_left'] = $daysLeft;
                 if($this->_modelUpgrade->expiresSoon($this->_uid)) {
-                    $daysLeft = $this->_modelUpgrade->getDaysLeft($this->_uid);
 				    $resp['data']['expires_soon'] = true;
-                    $resp['data']['days_left'] = $daysLeft;
                 } else {
 				    $resp['data']['expires_soon'] = false;
                 }
