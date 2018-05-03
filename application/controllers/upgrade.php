@@ -40,9 +40,9 @@ class upgrade extends l\Controller {
 			foreach($storage_plans as $plan) {
 				if($plan['product_id'] !== null) {
 					$product_name = showSize($plan['size']).' - '.$plan['price'].' '.strtoupper($plan['currency']).' - '.$this->duration($plan['duration']);
-          $plan['size'] = intval($plan['size']);
-          $plan['price'] = floatval($plan['price']);
-          $plan['duration'] = intval($plan['duration']);
+					$plan['size'] = intval($plan['size']);
+					$plan['price'] = floatval($plan['price']);
+					$plan['duration'] = intval($plan['duration']);
 					$plan['currency_symbol'] = currencySymbol($plan['currency']);
 					$plan['fields'] = [
 						'cmd' => '_pay_simple',
@@ -67,6 +67,108 @@ class upgrade extends l\Controller {
 		echo json_encode($resp);
     }
 
+    public function canSubscribeAction() {
+        header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$resp['token'] = $this->_token;
+
+		if($method !== 'get') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+        else {
+            $resp['code'] = 200;
+            $resp['status'] = 'success';
+            if(!($this->_modelUpgrade->hasSubscriptionActive($this->_uid))) {
+                $resp['data']['can_subscribe'] = true;
+            } else {
+                $resp['data']['can_subscribe'] = false;
+            }
+        }
+
+        http_response_code($resp['code']);
+		echo json_encode($resp);
+    }
+
+    public function hasSubscriptionActiveAction() {
+        header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$resp['token'] = $this->_token;
+
+		if($method !== 'get') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+        else {
+            $resp['code'] = 200;
+            $resp['status'] = 'success';
+            if($this->_modelUpgrade->hasSubscriptionActive($this->_uid)) {
+                $id_upgrade = $this->_modelUpgrade->getActiveSubscription($this->_uid);
+                $resp['data']['subscribed'] = true;
+                $resp['data']['id_upgrade'] = $id_upgrade;
+            } else {
+                $resp['data']['subscribed'] = false;
+            }
+        }
+
+        http_response_code($resp['code']);
+		echo json_encode($resp);
+    }
+
+    public function cancelAction() {
+        header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$resp['token'] = $this->_token;
+
+        if($method !== 'get') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+        else {
+            $resp['code'] = 200;
+            $resp['status'] = 'success';
+            if($this->_modelUpgrade->hasSubscriptionActive($this->_uid)) {
+                $this->_modelUpgrade->cancelSubscription($this->_uid);
+                $resp['data']['canceled'] = true;
+            } else {
+                $resp['data']['canceled'] = false;
+            }
+        }
+
+        http_response_code($resp['code']);
+		echo json_encode($resp);
+    }
+
+    public function hasSubscriptionEndedAction() {
+        header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$resp['token'] = $this->_token;
+
+        if($method !== 'get') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+        else {
+            $resp['code'] = 200;
+            $resp['status'] = 'success';
+            if(!$this->_modelUpgrade->hasExpired($this->_uid)) {
+				$daysLeft = $this->_modelUpgrade->getDaysLeft($this->_uid);
+				$resp['data']['expired'] = false;
+				$resp['data']['days_left'] = $daysLeft;
+                if($this->_modelUpgrade->expiresSoon($this->_uid)) {
+				    $resp['data']['expires_soon'] = true;
+                } else {
+				    $resp['data']['expires_soon'] = false;
+                }
+            } else {
+				$resp['data']['expired'] = true;
+            }
+        }
+
+        http_response_code($resp['code']);
+		echo json_encode($resp);
+    }
+
 	public function historyAction() {
 		header("Content-type: application/json");
 		$resp = self::RESP;
@@ -78,18 +180,18 @@ class upgrade extends l\Controller {
 			$resp['code'] = 405; // Method Not Allowed
 		}
 		else {
-      $upgrades = [];
-			if($upgrades = $this->_modelUpgrade->getUpgrades()) {
-				foreach($upgrades as $i => $upgrade) {
-					unset($upgrade['id']);
-					unset($upgrade['id_user']);
-					$upgrade['currency_symbol'] = currencySymbol($upgrade['currency']);
-					$upgrades[$i] = $upgrade;
-				}
-			}
-      $resp['code'] = 200;
-      $resp['status'] = 'success';
-      $resp['data'] = $upgrades;
+            $upgrades = [];
+            if($upgrades = $this->_modelUpgrade->getUpgrades()) {
+                foreach($upgrades as $i => $upgrade) {
+                    unset($upgrade['id']);
+                    unset($upgrade['id_user']);
+                    $upgrade['currency_symbol'] = currencySymbol($upgrade['currency']);
+                    $upgrades[$i] = $upgrade;
+                }
+            }
+            $resp['code'] = 200;
+            $resp['status'] = 'success';
+            $resp['data'] = $upgrades;
 		}
 
 		http_response_code($resp['code']);
