@@ -35,11 +35,12 @@ class session extends l\Controller {
 					if($pass !== false && password_verify($user->password, $pass)) {
 						// Password is ok
 						$user->updateLastConnection();
+						$user->updateLanguage(self::userLanguage);
 						$mUserVal = new m\UserValidation($data->uid);
 						if($mUserVal->getKey()) {
 							// Key found - User needs to validate its account (double auth only for validated accounts)
 							$resp['code'] = 401;
-              $resp['data'] = $data->uid;
+                            $resp['data'] = $data->uid;
 							$resp['message'] = 'validate';
 						}
 						elseif($user->getDoubleAuth()) {
@@ -50,7 +51,7 @@ class session extends l\Controller {
 								$resp['status'] = 'success';
 								$resp['token'] = $this->buildToken($data->uid);
 								$resp['data']['cek'] = $cek;
-                $resp['data']['uid'] = $id;
+                                $resp['data']['uid'] = $id;
 							} else {
 								// Wrong code
 								$resp['code'] = 401;
@@ -79,50 +80,49 @@ class session extends l\Controller {
 		http_response_code($resp['code']);
 		echo json_encode($resp);
     }
+    
+    public function jtiAction($jti) { // Delete session $jti for current user
+        header("Content-type: application/json");
+        $resp = self::RESP;
+        $method = h\httpMethodsData::getMethod();
 
-  public function jtiAction($jti) { // Delete session $jti for current user
-    header("Content-type: application/json");
-		$resp = self::RESP;
-		$method = h\httpMethodsData::getMethod();
+        if($method !== 'delete') {
+            $resp['code'] = 405; // Method Not Allowed
+        } elseif($this->isLogged() === true) {
+            $jti = str_replace(':', '', $jti);
+            $this->removeToken($jti, $this->_uid);
+            $resp['code'] = 200;
+            $resp['status'] = 'success';
+            if($jti === $this->_token) {
+                $resp['message'] = 'removeToken';
+            } else {
+                $resp['token'] = $this->_token;
+            }
+        } else {
+            $resp['message'] = 'emptyField';
+        }
 
-    if($method !== 'delete') {
-			$resp['code'] = 405; // Method Not Allowed
-    } elseif($this->isLogged() === true) {
-      $jti = str_replace(':', '', $jti);
-      $this->removeToken($jti, $this->_uid);
-      $resp['code'] = 200;
-  		$resp['status'] = 'success';
-      if($jti === $this->_token) {
-        $resp['message'] = 'removeToken';
-      } else {
-        $resp['token'] = $this->_token;
-      }
-    } else {
-      $resp['message'] = 'emptyField';
+        http_response_code($resp['code']);
+        echo json_encode($resp);
     }
 
-    http_response_code($resp['code']);
-		echo json_encode($resp);
-  }
+    public function allAction() { // Delete all sessions (except current) for current user
+          header("Content-type: application/json");
+          $resp = self::RESP;
+          $method = h\httpMethodsData::getMethod();
 
-  public function allAction() { // Delete all sessions (except current) for current user
-    header("Content-type: application/json");
-		$resp = self::RESP;
-		$method = h\httpMethodsData::getMethod();
-
-    if($method !== 'delete') {
-			$resp['code'] = 405; // Method Not Allowed
-		} elseif($this->isLogged() === true) {
-      $this->removeTokens($this->_uid, false);
-      $resp['code'] = 200;
-  		$resp['status'] = 'success';
-    } else {
-      $resp['message'] = 'emptyField';
+          if($method !== 'delete') {
+              $resp['code'] = 405; // Method Not Allowed
+          } elseif($this->isLogged() === true) {
+              $this->removeTokens($this->_uid, false);
+              $resp['code'] = 200;
+              $resp['status'] = 'success';
+          } else {
+              $resp['message'] = 'emptyField';
+          }
+          http_response_code($resp['code']);
+          echo json_encode($resp);
     }
-
-    http_response_code($resp['code']);
-		echo json_encode($resp);
-  }
 
 	private function login($resp) {
 		sleep(2);
@@ -160,6 +160,7 @@ class session extends l\Controller {
 						$resp['status'] = 'success';
 
 						$new_user->updateLastConnection();
+						$new_user->updateLanguage(self::userLanguage);
                         $mUserVal = new m\UserValidation($id);
 
                         if(!($mUserVal->getKey())) {
@@ -206,7 +207,7 @@ class session extends l\Controller {
         }
 		return $resp;
 	}
-
+    
 	private function delete($resp) {
 		// Delete the token and do not generate a new one
 		$token = h\httpMethodsData::getToken();
@@ -234,7 +235,7 @@ class session extends l\Controller {
 		$resp['status'] = 'success';
 		$resp['token'] = $this->_token; // Send it in the response because a new one could be generated when verifying
 		$resp['data']['uid'] = $this->_uid;
-    $resp['data']['tokens'] = $this->getTokens($this->_uid);
+        $resp['data']['tokens'] = $this->getTokens($this->_uid);
 		return $resp;
 	}
 

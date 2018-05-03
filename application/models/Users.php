@@ -217,6 +217,12 @@ class Users extends l\Model {
 	    $req = self::$_sql->prepare("UPDATE users SET last_connection = ? WHERE id = ?");
 	    return $req->execute([time(), $this->id]);
 	}
+    
+    function updateLanguage($language) {
+		if($this->id === null) return false;
+	    $req = self::$_sql->prepare("UPDATE users SET language = ? WHERE id = ?");
+	    return $req->execute([$language, $this->id]);
+	}
 
 	function deleteUser() {
 		if($this->id === null) return false;
