@@ -40,6 +40,9 @@ class upgrade extends l\Controller {
 			foreach($storage_plans as $plan) {
 				if($plan['product_id'] !== null) {
 					$product_name = showSize($plan['size']).' - '.$plan['price'].' '.strtoupper($plan['currency']).' - '.$this->duration($plan['duration']);
+          $plan['size'] = intval($plan['size']);
+          $plan['price'] = floatval($plan['price']);
+          $plan['duration'] = intval($plan['duration']);
 					$plan['currency_symbol'] = currencySymbol($plan['currency']);
 					$plan['fields'] = [
 						'cmd' => '_pay_simple',

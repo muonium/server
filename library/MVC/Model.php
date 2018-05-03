@@ -21,7 +21,7 @@ class Model {
     }
 
     public function getLastInsertedId() {
-        return self::$_sql->lastInsertId();
+        return intval(self::$_sql->lastInsertId());
     }
 
 	protected function insert($table, $data) {

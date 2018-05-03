@@ -74,9 +74,9 @@ class rm extends c\FileManager {
 		if($total_size > 0) {
 	        $this->_modelStorage = new m\Storage($this->_uid);
 	        if($this->_modelStorage->decrementSizeStored($total_size)) {
-				$size_stored = $this->redis->get('token:'.$this->_token.':size_stored');
+				$size_stored = $this->redis->get('token:'.$this->_jti.':size_stored');
 				if($size_stored !== null) {
-					$this->redis->set('token:'.$this->_token.':size_stored', intval($size_stored)-$total_size);
+					$this->redis->set('token:'.$this->_jti.':size_stored', intval($size_stored)-$total_size);
 				}
 			}
 		}
@@ -112,9 +112,9 @@ class rm extends c\FileManager {
 		if($total_size > 0) {
 			$this->_modelStorage = new m\Storage($this->_uid);
 			if($this->_modelStorage->decrementSizeStored($total_size)) {
-				$size_stored = $this->redis->get('token:'.$this->_token.':size_stored');
+				$size_stored = $this->redis->get('token:'.$this->_jti.':size_stored');
 				if($size_stored !== null) {
-					$this->redis->set('token:'.$this->_token.':size_stored', intval($size_stored)-$total_size);
+					$this->redis->set('token:'.$this->_jti.':size_stored', intval($size_stored)-$total_size);
 				}
 			}
 		}
