@@ -18,7 +18,7 @@ class Controller {
 	// Current token, UID and jti - can be used in controllers that require a logged user
 	public $_token = null;
 	public $_uid = null;
-  public $_jti = null;
+    public $_jti = null;
 
 	// Default response (bad request)
 	const RESP = [
@@ -91,7 +91,7 @@ class Controller {
 				$decodedToken = $this->getDecodedToken();
 				$this->_uid = $decodedToken['data']['uid'];
 				$this->_token = $token;
-        $this->_jti = $decodedToken['jti'];
+                $this->_jti = $decodedToken['jti'];
 				return true;
 			}
 		}
@@ -130,24 +130,24 @@ class Controller {
 		return \Firebase\JWT\JWT::encode($data, $secretKey, 'HS384');
 	}
 
-  public function getTokens($userId) {
-    $tokens = [];
-    if($uidTokens = $this->redis->get('uid:'.$userId)) {
-      $uidTokens = substr($uidTokens, -1) === ';' ? substr($uidTokens, 0, -1) : $uidTokens;
-			$uidTokens = explode(';', $uidTokens);
-      foreach($uidTokens as $jti) {
-        if($iat = $this->redis->get('token:'.$jti.':iat')) {
-          $tokens[] = ['jti' => $jti, 'iat' => $iat, 'current' => ($jti === $this->decoded['jti'])];
+    public function getTokens($userId) {
+        $tokens = [];
+        if($uidTokens = $this->redis->get('uid:'.$userId)) {
+            $uidTokens = substr($uidTokens, -1) === ';' ? substr($uidTokens, 0, -1) : $uidTokens;
+            $uidTokens = explode(';', $uidTokens);
+            foreach($uidTokens as $jti) {
+                if($iat = $this->redis->get('token:'.$jti.':iat')) {
+                    $tokens[] = ['jti' => $jti, 'iat' => $iat, 'current' => ($jti === $this->decoded['jti'])];
+                }
+            }
+            usort($tokens, function($a, $b) {
+                $c = $b['current'] - $a['current'];
+                if ($c !== 0) return $c;
+                return ($a['iat'] < $b['iat']) ? 1 : -1;
+            });
         }
-      }
-      usort($tokens, function($a, $b) {
-        $c = $b['current'] - $a['current'];
-        if ($c !== 0) return $c;
-        return ($a['iat'] < $b['iat']) ? 1 : -1;
-      });
+        return $tokens;
     }
-    return $tokens;
-  }
 
 	public function removeToken($jti, $userId) {
 		if($uidTokens = $this->redis->get('uid:'.$userId)) {
@@ -158,12 +158,12 @@ class Controller {
 				$this->redis->del('uid:'.$userId);
 			}
 		}
-    if($this->redis->get('token:'.$jti.':uid') == $userId) {
-  		$keys = $this->redis->keys('token:'.$jti.'*');
-  		foreach($keys as $key) {
-  			$this->redis->del($key);
-  		}
-    }
+        if($this->redis->get('token:'.$jti.':uid') == $userId) {
+            $keys = $this->redis->keys('token:'.$jti.'*');
+            foreach($keys as $key) {
+                $this->redis->del($key);
+            }
+        }
 		return true;
 	}
 
@@ -172,8 +172,8 @@ class Controller {
 			$uidTokens = substr($uidTokens, -1) === ';' ? substr($uidTokens, 0, -1) : $uidTokens;
 			$uidTokens = explode(';', $uidTokens);
 			foreach($uidTokens as $jti) {
-        if(!$removeCurrent && $jti === $this->decoded['jti']) continue;
-				$keys = $this->redis->keys('token:'.$jti.'*');
+                if(!$removeCurrent && $jti === $this->decoded['jti']) continue;
+                $keys = $this->redis->keys('token:'.$jti.'*');
 				foreach($keys as $key) {
 					$this->redis->del($key);
 				}

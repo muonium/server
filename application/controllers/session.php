@@ -39,7 +39,7 @@ class session extends l\Controller {
 						if($mUserVal->getKey()) {
 							// Key found - User needs to validate its account (double auth only for validated accounts)
 							$resp['code'] = 401;
-              $resp['data'] = $data->uid;
+                            $resp['data'] = $data->uid;
 							$resp['message'] = 'validate';
 						}
 						elseif($user->getDoubleAuth()) {
@@ -50,7 +50,7 @@ class session extends l\Controller {
 								$resp['status'] = 'success';
 								$resp['token'] = $this->buildToken($data->uid);
 								$resp['data']['cek'] = $cek;
-                $resp['data']['uid'] = intval($data->uid);
+                                $resp['data']['uid'] = intval($data->uid);
 							} else {
 								// Wrong code
 								$resp['code'] = 401;
@@ -80,49 +80,49 @@ class session extends l\Controller {
 		echo json_encode($resp);
     }
 
-  public function jtiAction($jti) { // Delete session $jti for current user
-    header("Content-type: application/json");
+    public function jtiAction($jti) { // Delete session $jti for current user
+        header("Content-type: application/json");
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
 
-    if($method !== 'delete') {
+        if($method !== 'delete') {
 			$resp['code'] = 405; // Method Not Allowed
-    } elseif($this->isLogged() === true) {
-      $jti = str_replace(['-', '_', ':'], ['+', '/', ''], $jti);
-      $this->removeToken($jti, $this->_uid);
-      $resp['code'] = 200;
-  		$resp['status'] = 'success';
-      if($jti === $this->_token) {
-        $resp['message'] = 'removeToken';
-      } else {
-        $resp['token'] = $this->_token;
-      }
-    } else {
-      $resp['message'] = 'emptyField';
+        } elseif($this->isLogged() === true) {
+            $jti = str_replace(['-', '_', ':'], ['+', '/', ''], $jti);
+            $this->removeToken($jti, $this->_uid);
+            $resp['code'] = 200;
+            $resp['status'] = 'success';
+            if($jti === $this->_token) {
+                $resp['message'] = 'removeToken';
+            } else {
+                $resp['token'] = $this->_token;
+            }
+        } else {
+            $resp['message'] = 'emptyField';
+        }
+
+        http_response_code($resp['code']);
+		echo json_encode($resp);
     }
 
-    http_response_code($resp['code']);
-		echo json_encode($resp);
-  }
-
-  public function allAction() { // Delete all sessions (except current) for current user
-    header("Content-type: application/json");
+    public function allAction() { // Delete all sessions (except current) for current user
+        header("Content-type: application/json");
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
 
-    if($method !== 'delete') {
+        if($method !== 'delete') {
 			$resp['code'] = 405; // Method Not Allowed
 		} elseif($this->isLogged() === true) {
-      $this->removeTokens($this->_uid, false);
-      $resp['code'] = 200;
-  		$resp['status'] = 'success';
-    } else {
-      $resp['message'] = 'emptyField';
-    }
+            $this->removeTokens($this->_uid, false);
+            $resp['code'] = 200;
+            $resp['status'] = 'success';
+        } else {
+            $resp['message'] = 'emptyField';
+        }
 
-    http_response_code($resp['code']);
+        http_response_code($resp['code']);
 		echo json_encode($resp);
-  }
+    }
 
 	private function login($resp) {
 		sleep(2);
@@ -167,7 +167,6 @@ class session extends l\Controller {
                             if($new_user->getDoubleAuth()) {
                                 // Double auth : send an email with a code
                                 $code = $this->generateCode();
-                                $new_user->updateCode($code);
                                 $mail = new l\Mail();
 								$mail->delay(60, $id, $this->getRedis());
                                 $mail->_to = $email;
@@ -179,6 +178,7 @@ class session extends l\Controller {
                                 if($mail->send() === 'wait') {
 									$resp['message'] = 'wait';
 								} else {
+                                    $new_user->updateCode($code);
 									$resp['message'] = 'doubleAuth';
 								}
                             }
@@ -237,7 +237,7 @@ class session extends l\Controller {
 		$resp['status'] = 'success';
 		$resp['token'] = $this->_token; // Send it in the response because a new one could be generated when verifying
 		$resp['data']['uid'] = $this->_uid;
-    $resp['data']['tokens'] = $this->getTokens($this->_uid);
+        $resp['data']['tokens'] = $this->getTokens($this->_uid);
 		return $resp;
 	}
 
