@@ -52,7 +52,7 @@ class confDB {
 
 7. Create a folder `public`, clone the [translations](https://github.com/muonium/translations), extract the `webclient` folder to `public` and rename it as `translations`.
 
-PS: enable mod_rewrite and mod_headers
+PS: enable `mod_rewrite` and `mod_headers`
 
 # Documentation
 You can find our documentation [here](https://muonium.github.io/docs/).
