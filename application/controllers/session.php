@@ -35,7 +35,7 @@ class session extends l\Controller {
 					if($pass !== false && password_verify($user->password, $pass)) {
 						// Password is ok
 						$user->updateLastConnection();
-						$user->updateLanguage(self::userLanguage);
+						$user->updateLanguage(self::$userLanguage);
 						$mUserVal = new m\UserValidation($data->uid);
 						if($mUserVal->getKey()) {
 							// Key found - User needs to validate its account (double auth only for validated accounts)
@@ -80,7 +80,7 @@ class session extends l\Controller {
 		http_response_code($resp['code']);
 		echo json_encode($resp);
     }
-    
+
     public function jtiAction($jti) { // Delete session $jti for current user
         header("Content-type: application/json");
         $resp = self::RESP;
@@ -160,7 +160,7 @@ class session extends l\Controller {
 						$resp['status'] = 'success';
 
 						$new_user->updateLastConnection();
-						$new_user->updateLanguage(self::userLanguage);
+						$new_user->updateLanguage(self::$userLanguage);
                         $mUserVal = new m\UserValidation($id);
 
                         if(!($mUserVal->getKey())) {
@@ -207,7 +207,7 @@ class session extends l\Controller {
         }
 		return $resp;
 	}
-    
+
 	private function delete($resp) {
 		// Delete the token and do not generate a new one
 		$token = h\httpMethodsData::getToken();
