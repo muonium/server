@@ -26,7 +26,7 @@ class session extends l\Controller {
 		elseif($this->isLogged() === false) {
 			// User is not logged
 			if(isset($data->uid) && isset($data->password) && isset($data->code)) {
-				if(is_numeric($data->uid) && strlen($data->code) === 8) {
+				if(is_pos_digit($data->uid) && strlen($data->code) === 8) {
 					$user = new m\Users($data->uid);
 					$user->password = urldecode($data->password);
 					$pass = $user->getPassword();
@@ -51,7 +51,7 @@ class session extends l\Controller {
 								$resp['status'] = 'success';
 								$resp['token'] = $this->buildToken($data->uid);
 								$resp['data']['cek'] = $cek;
-                                $resp['data']['uid'] = $id;
+                                $resp['data']['uid'] = intval($data->uid);
 							} else {
 								// Wrong code
 								$resp['code'] = 401;
@@ -83,13 +83,13 @@ class session extends l\Controller {
 
     public function jtiAction($jti) { // Delete session $jti for current user
         header("Content-type: application/json");
-        $resp = self::RESP;
-        $method = h\httpMethodsData::getMethod();
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
 
         if($method !== 'delete') {
-            $resp['code'] = 405; // Method Not Allowed
+			$resp['code'] = 405; // Method Not Allowed
         } elseif($this->isLogged() === true) {
-            $jti = str_replace(':', '', $jti);
+            $jti = str_replace(['-', '_', ':'], ['+', '/', ''], $jti);
             $this->removeToken($jti, $this->_uid);
             $resp['code'] = 200;
             $resp['status'] = 'success';
@@ -103,25 +103,26 @@ class session extends l\Controller {
         }
 
         http_response_code($resp['code']);
-        echo json_encode($resp);
+		echo json_encode($resp);
     }
 
     public function allAction() { // Delete all sessions (except current) for current user
-          header("Content-type: application/json");
-          $resp = self::RESP;
-          $method = h\httpMethodsData::getMethod();
+        header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
 
-          if($method !== 'delete') {
-              $resp['code'] = 405; // Method Not Allowed
-          } elseif($this->isLogged() === true) {
-              $this->removeTokens($this->_uid, false);
-              $resp['code'] = 200;
-              $resp['status'] = 'success';
-          } else {
-              $resp['message'] = 'emptyField';
-          }
-          http_response_code($resp['code']);
-          echo json_encode($resp);
+        if($method !== 'delete') {
+			$resp['code'] = 405; // Method Not Allowed
+		} elseif($this->isLogged() === true) {
+            $this->removeTokens($this->_uid, false);
+            $resp['code'] = 200;
+            $resp['status'] = 'success';
+        } else {
+            $resp['message'] = 'emptyField';
+        }
+
+        http_response_code($resp['code']);
+		echo json_encode($resp);
     }
 
 	private function login($resp) {
@@ -168,22 +169,25 @@ class session extends l\Controller {
                             if($new_user->getDoubleAuth()) {
                                 // Double auth : send an email with a code
                                 $code = $this->generateCode();
-                                $new_user->updateCode($code);
                                 $mail = new l\Mail();
 								$mail->delay(60, $id, $this->getRedis());
-                                $mail->_to = $e;
+                                $mail->_to = $email;
                                 $mail->_subject = "Muonium - ".self::$txt->Profile->doubleAuth;
                                 $mail->_message = str_replace("[key]", $code, self::$txt->Login->doubleAuthMessage);
-                                $resp['data'] = $id;
+                                $resp['data'] = [];
+                                $resp['data']['cek'] = $cek; // the CEK is already url encoded in the database
+                                $resp['data']['uid'] = $id;
                                 if($mail->send() === 'wait') {
 									$resp['message'] = 'wait';
 								} else {
+                                    $new_user->updateCode($code);
 									$resp['message'] = 'doubleAuth';
 								}
                             }
                             else { // Logged
 								$resp['token'] = $this->buildToken($id);
 							}
+                            $resp['data'] = [];
                             $resp['data']['cek'] = $cek; // the CEK is already url encoded in the database
                             $resp['data']['uid'] = $id;
                         }

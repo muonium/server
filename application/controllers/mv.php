@@ -47,8 +47,8 @@ class mv extends c\FileManager {
 			        $quota = $this->_modelStorage->getUserQuota();
 			        $stored = $this->_modelStorage->getSizeStored();
 					if($quota !== false && $stored !== false) {
-						$this->redis->set('token:'.$this->_token.':size_stored', $stored);
-						$this->redis->set('token:'.$this->_token.':user_quota', $quota);
+						$this->redis->set('token:'.$this->_jti.':size_stored', $stored);
+						$this->redis->set('token:'.$this->_jti.':user_quota', $quota);
 				        $uploaded = 0;
 
 				        if(is_dir(NOVA.'/'.$this->_uid.'/'.$this->_path) && is_dir(NOVA.'/'.$this->_uid.'/'.$old_path)) {
@@ -73,7 +73,7 @@ class mv extends c\FileManager {
 													continue;
 												}
 
-												if($key = $this->redis->get('token:'.$this->_token.':folder:'.$old_folder_id.':'.$filename)) {
+												if($key = $this->redis->get('token:'.$this->_jti.':folder:'.$old_folder_id.':'.$filename)) {
 													$this->redis->del('token:'.$this->_token.':folder:'.$old_folder_id.':'.$filename);
 												}
 				                                if(rename(NOVA.'/'.$this->_uid.'/'.$old_path.$filename, NOVA.'/'.$this->_uid.'/'.$this->_path.$dst_filename)) {
@@ -156,7 +156,7 @@ class mv extends c\FileManager {
 												continue;
 											}
 
-											if($key = $this->redis->get('token:'.$this->_token.':folder:'.$folder)) {
+											if($key = $this->redis->get('token:'.$this->_jti.':folder:'.$folder)) {
 				                                $this->redis->del('token:'.$this->_token.':folder:'.$folder);
 											}
 
@@ -216,7 +216,7 @@ class mv extends c\FileManager {
 				            } // end folders
 
 				            if($this->_modelStorage->updateSizeStored($stored)) {
-								$this->redis->set('token:'.$this->_token.':size_stored', $stored);
+								$this->redis->set('token:'.$this->_jti.':size_stored', $stored);
 							}
 				            if($uploaded !== 0) {
 								$this->_modelFolders->updateFoldersSize($this->_folderId, $uploaded);

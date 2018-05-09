@@ -4,6 +4,21 @@
 - Composer
 - HTTPD Apache, 2.4 preferred
 - PHP 5.6 / 7.0+
+- PHP mcrypt extension
+
+# License
+Read the license please : [here](https://raw.githubusercontent.com/muonium/server/master/LICENSE)
+
+**Feel free to contribute :)**
+
+Artworks: license is [this one](https://creativecommons.org/licenses/by-sa/4.0/legalcode).
+
+# Security
+If you are a security expert, you can help us to build more securely Muonium.
+Or, if you see a security issue or several in the code, do not hesitate to contribute.
+
+### Cryptography
+Take a look at [our cryptography details](https://github.com/muonium/whitepaper/blob/master/main.pdf).
 
 # Installation
 Follow these steps to install Muonium's server API.
@@ -33,9 +48,14 @@ class confDB {
 }
 ?>
 ```
-6. Do the same for server/config/confMail.php, for server/config/confPayments.php and for server/config/secretKey.php
+6. Do the same for server/config/confMail.php, for server/config/confPayments.php, for server/config/confRedis.php and for server/config/secretKey.php
 
-PS: enable mod_rewrite
+7. Create a folder `public`, clone the [translations](https://github.com/muonium/translations), extract the `webclient` folder to `public` and rename it as `translations`.
+
+PS: enable `mod_rewrite` and `mod_headers`
 
 # Documentation
-You can find our documentation [here](https://github.com/muonium/docs).
+You can find our documentation [here](https://muonium.github.io/docs/).
+
+# Contributing
+Take a look at [CODE_OF_CONDUCT.md](https://github.com/muonium/server/blob/master/CODE_OF_CONDUCT.md) and [CONTRIBUTING.md](https://github.com/muonium/server/blob/master/CONTRIBUTING.md).
