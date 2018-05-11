@@ -3,19 +3,24 @@ namespace application\models;
 use \library\MVC as l;
 
 class Users extends l\Model {
-    /* users table
-        1   id                  int(11)         AUTO_INCREMENT
-        2   login               varchar(20)
-        3   password            varchar(128)
-        4   email               varchar(254)
-        5   registration_date   int(11)
-        6   last_connection     int(11)
-        7   cek                 varchar(330)
-        8   double_auth         tinyint(1)      0 : Double auth not available for this user, 1 : Double auth available for this user
-        9   auth_code           varchar(8)
+    /*
+        CREATE TABLE IF NOT EXISTS users (
+    	user_id uuid,
+    	login text,
+    	password text,
+    	email text,
+    	lang text,
+    	registration_date timestamp,
+    	last_connection timestamp,
+    	cek text,
+    	pks tuple<text, text>,
+    	double_auth boolean,
+    	auth_code text,
+    	PRIMARY KEY (user_id)
+    );
     */
 
-    protected $id = null;
+    protected $user_id = null;
     protected $login;
     protected $password;
     protected $email;
@@ -23,10 +28,10 @@ class Users extends l\Model {
     protected $doubleAuth = 0;
     protected $code;
 
-	function __construct($id = null) {
+	function __construct($user_id = null) {
 		parent::__construct();
-		// id (int) can be passed at init
-		$this->id = $id;
+		// user_id (uuid) can be passed at init
+		$this->user_id = $user_id;
 	}
 
     function setDoubleAuth($state) {
@@ -57,7 +62,7 @@ class Users extends l\Model {
 
     function getEmail($id = null) {
         // Returns user email with its id, login or email if exists
-		$id = $id === null ? $this->id : $id;
+		$id = $id === null ? $this->user_id : $id;
 		if(is_numeric($id)) {
 			$req = self::$_sql->prepare("SELECT email FROM users WHERE id = ?");
             $req->execute([$id]);
@@ -80,25 +85,25 @@ class Users extends l\Model {
 
     function getPassword() {
 		// Returns hashed password
-		if($this->id === null) return false;
+		if($this->user_id === null) return false;
         $req = self::$_sql->prepare("SELECT password FROM users WHERE id = ?");
-        $req->execute([$this->id]);
+        $req->execute([$this->user_id]);
         if($req->rowCount() === 0) return false;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
         return $res['password'];
     }
 
     function getCek() {
-		if($this->id === null) return false;
+		if($this->user_id === null) return false;
         $req = self::$_sql->prepare("SELECT cek FROM users WHERE id = ?");
-        $req->execute([$this->id]);
+        $req->execute([$this->user_id]);
         if($req->rowCount() === 0) return false;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
         return $res['cek'];
     }
 
     function getLogin($id = null) {
-		$id = $id === null ? $this->id : $id;
+		$id = $id === null ? $this->user_id : $id;
 		if(!is_numeric($id)) return false;
 		$req = self::$_sql->prepare("SELECT login FROM users WHERE id = ?");
         $req->execute([$id]);
@@ -108,26 +113,26 @@ class Users extends l\Model {
     }
 
     function getDoubleAuth() {
-		if($this->id === null) return false;
+		if($this->user_id === null) return false;
         $req = self::$_sql->prepare("SELECT double_auth FROM users WHERE id = ? AND double_auth = '1'");
-        $req->execute([$this->id]);
+        $req->execute([$this->user_id]);
         if($req->rowCount() === 0) return false;
         return true;
     }
 
     function getCode() {
-		if($this->id === null) return false;
+		if($this->user_id === null) return false;
         $req = self::$_sql->prepare("SELECT auth_code FROM users WHERE id = ?");
-        $req->execute([$this->id]);
+        $req->execute([$this->user_id]);
         if($req->rowCount() === 0) return false;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
         return $res['auth_code'];
     }
 
 	function getInfos() {
-		if($this->id === null) return false;
+		if($this->user_id === null) return false;
 		$req = self::$_sql->prepare("SELECT id, login, email, registration_date, double_auth FROM users WHERE id = ?");
-		$req->execute([$this->id]);
+		$req->execute([$this->user_id]);
         if($req->rowCount() === 0) return false;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
         return $res;
@@ -176,57 +181,57 @@ class Users extends l\Model {
 	}
 
     function updateLogin() {
-		if($this->id === null) return false;
+		if($this->user_id === null) return false;
         $req = self::$_sql->prepare("UPDATE users SET login = ? WHERE id = ?");
-        return $req->execute([$this->login, $this->id]);
+        return $req->execute([$this->login, $this->user_id]);
     }
 
     function updatePassword() {
 		// Password must be hashed before
-		if($this->id === null) return false;
+		if($this->user_id === null) return false;
         $req = self::$_sql->prepare("UPDATE users SET password = ? WHERE id = ?");
-        return $req->execute([$this->password, $this->id]);
+        return $req->execute([$this->password, $this->user_id]);
     }
 
     function updateCek() {
-		if($this->id === null) return false;
+		if($this->user_id === null) return false;
         $req = self::$_sql->prepare("UPDATE users SET cek = ? WHERE id = ?");
-        return $req->execute([$this->cek, $this->id]);
+        return $req->execute([$this->cek, $this->user_id]);
     }
 
     function updateDoubleAuth($state) {
-		if($this->id === null || ($state != 0 && $state != 1)) return false;
+		if($this->user_id === null || ($state != 0 && $state != 1)) return false;
         $req = self::$_sql->prepare("UPDATE users SET double_auth = ? WHERE id = ?");
-        return $req->execute([$state, $this->id]);
+        return $req->execute([$state, $this->user_id]);
     }
 
     function updateCode($code) {
-		if($this->id === null || strlen($code) !== 8) return false;
+		if($this->user_id === null || strlen($code) !== 8) return false;
         $req = self::$_sql->prepare("UPDATE users SET auth_code = ? WHERE id = ?");
-        return $req->execute([$code, $this->id]);
+        return $req->execute([$code, $this->user_id]);
     }
 
 	function updatemail() {
-	    if($this->id === null) return false;
+	    if($this->user_id === null) return false;
 	    $req = self::$_sql->prepare("UPDATE users SET email = ? WHERE id = ?");
-	    return $req->execute([$this->email, $this->id]);
+	    return $req->execute([$this->email, $this->user_id]);
 	}
 
 	function updateLastConnection() {
-		if($this->id === null) return false;
+		if($this->user_id === null) return false;
 	    $req = self::$_sql->prepare("UPDATE users SET last_connection = ? WHERE id = ?");
-	    return $req->execute([time(), $this->id]);
+	    return $req->execute([time(), $this->user_id]);
 	}
 
     function updateLanguage($lang) {
-		if($this->id === null) return false;
+		if($this->user_id === null) return false;
 	    $req = self::$_sql->prepare("UPDATE users SET lang = ? WHERE id = ?");
-	    return $req->execute([$lang, $this->id]);
+	    return $req->execute([$lang, $this->user_id]);
 	}
 
 	function deleteUser() {
-		if($this->id === null) return false;
+		if($this->user_id === null) return false;
         $req = self::$_sql->prepare("DELETE FROM users WHERE id = ?");
-        return $req->execute([$this->id]);
+        return $req->execute([$this->user_id]);
     }
 }

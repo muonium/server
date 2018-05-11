@@ -3,49 +3,51 @@ namespace application\models;
 use \library\MVC as l;
 
 class UserValidation extends l\Model {
-    /* user_validation table
-        1   id                  int(11)         AUTO_INCREMENT
-        2   id_user             int(11)
-        3   val_key             varchar(128)
+    /*
+    CREATE TABLE IF NOT EXISTS user_validation (
+    	user_id uuid,
+    	val_key text,
+    	PRIMARY KEY (user_id)
+    );
     */
 
     protected $id = null;
-    protected $id_user = null;
+    protected $user_id = null;
     protected $val_key;
 
-	function __construct($id_user = null) {
+	function __construct($user_id = null) {
 		parent::__construct();
-		// id_user (int) can be passed at init
-		$this->id_user = $id_user;
+		// user_id (uuid) can be passed at init
+		$this->user_id = $user_id;
 	}
 
     function getKey() {
-		if($this->id_user === null) return false;
-        $req = self::$_sql->prepare("SELECT val_key FROM user_validation WHERE id_user = ?");
-        $req->execute([$this->id_user]);
+		if($this->user_id === null) return false;
+        $req = self::$_sql->prepare("SELECT val_key FROM user_validation WHERE user_id = ?");
+        $req->execute([$this->user_id]);
         if($req->rowCount() === 0) return false;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
         return $res['val_key'];
     }
 
     function Delete() {
-		if($this->id_user === null) return false;
-        $req = self::$_sql->prepare("DELETE FROM user_validation WHERE id_user = ?");
-        return $req->execute([$this->id_user]);
+		if($this->user_id === null) return false;
+        $req = self::$_sql->prepare("DELETE FROM user_validation WHERE user_id = ?");
+        return $req->execute([$this->user_id]);
     }
 
     function Insertion() {
-		if($this->id_user === null || !isset($this->val_key)) return false;
+		if($this->user_id === null || !isset($this->val_key)) return false;
 		return $this->insert('user_validation', [
 			'id' => null,
-			'id_user' => $this->id_user,
+			'user_id' => $this->user_id,
 			'val_key' => $this->val_key
 		]);
     }
 
     function Update() {
-		if($this->id_user === null || !isset($this->val_key)) return false;
-        $req = self::$_sql->prepare("UPDATE user_validation SET val_key = ? WHERE id_user = ?");
-        return $req->execute([$this->val_key, $this->id_user]);
+		if($this->user_id === null || !isset($this->val_key)) return false;
+        $req = self::$_sql->prepare("UPDATE user_validation SET val_key = ? WHERE user_id = ?");
+        return $req->execute([$this->val_key, $this->user_id]);
     }
 }
