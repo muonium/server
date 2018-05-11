@@ -218,6 +218,12 @@ class Users extends l\Model {
 	    return $req->execute([time(), $this->id]);
 	}
 
+    function updateLanguage($lang) {
+		if($this->id === null) return false;
+	    $req = self::$_sql->prepare("UPDATE users SET lang = ? WHERE id = ?");
+	    return $req->execute([$lang, $this->id]);
+	}
+
 	function deleteUser() {
 		if($this->id === null) return false;
         $req = self::$_sql->prepare("DELETE FROM users WHERE id = ?");

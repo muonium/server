@@ -35,6 +35,7 @@ class session extends l\Controller {
 					if($pass !== false && password_verify($user->password, $pass)) {
 						// Password is ok
 						$user->updateLastConnection();
+						$user->updateLanguage(self::$userLanguage);
 						$mUserVal = new m\UserValidation($data->uid);
 						if($mUserVal->getKey()) {
 							// Key found - User needs to validate its account (double auth only for validated accounts)
@@ -160,6 +161,7 @@ class session extends l\Controller {
 						$resp['status'] = 'success';
 
 						$new_user->updateLastConnection();
+						$new_user->updateLanguage(self::$userLanguage);
                         $mUserVal = new m\UserValidation($id);
 
                         if(!($mUserVal->getKey())) {

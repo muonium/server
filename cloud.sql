@@ -125,6 +125,7 @@ CREATE TABLE `users` (
   `login` varchar(20) NOT NULL,
   `password` varchar(128) NOT NULL,
   `email` varchar(254) NOT NULL,
+  `lang` varchar(6) DEFAULT NULL,
   `registration_date` int(11) NOT NULL,
   `last_connection` int(11) NOT NULL,
   `cek` varchar(330) NOT NULL,
