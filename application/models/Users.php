@@ -159,6 +159,7 @@ class Users extends l\Model {
 			'login' => $this->login,
 			'password' => $this->password,
 			'email' => $this->email,
+            'lang' => null,
 			'registration_date' => time(),
 			'last_connection' => time(),
 			'cek' => $this->cek,

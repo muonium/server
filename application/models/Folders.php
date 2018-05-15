@@ -154,8 +154,7 @@ class Folders extends l\Model {
         } while($id != 0 && $id !== false);
     }
 
-    // Update path of a folder and its subfolders
-    // Maybe better to use UPDATE with LIKE ?
+    // Rename folder which has specified path (old method)
     function updatePath($id, $path, $foldername) {
 		if($this->id_owner === null) return false;
         $subdirs = $this->getChildren($id);
@@ -168,7 +167,7 @@ class Folders extends l\Model {
         $req->execute([$path, $this->id_owner, $id]);
     }
 
-    // Experimental method, rename folder which has specified path
+    // Rename folder which has specified path (new method)
     function rename($path, $old, $new) {
 		if($this->id_owner === null) return false;
         $req = self::$_sql->prepare("UPDATE folders SET name = ? WHERE id_owner = ? AND name = ? AND `path` = ?");

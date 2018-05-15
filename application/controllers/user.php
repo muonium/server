@@ -173,6 +173,27 @@ class user extends l\Controller {
 		echo json_encode($resp);
     }
 
+    public function changeLangAction() {
+        header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+
+        if($method !== 'post') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+		elseif($this->isLogged() === true) {
+			$resp['token'] = $this->_token;
+	        $this->_modelUser = new m\Users($this->_uid);
+	        if($this->_modelUser->updateLanguage(self::$userLanguage)) {
+				$resp['code'] = 200;
+				$resp['status'] = 'success';
+	        }
+		}
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+    }
+
 	private function delete($resp) {
 		function removeDirectory($path) {
 			$files = glob($path . '/*');
