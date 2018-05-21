@@ -12,16 +12,6 @@ class session extends l\Controller {
 	function __construct() {
         parent::__construct();
     }
-
-    public function isDoubleAuthGAAction() {
-        $id = 1;
-        $user = new m\Users($id);
-        if($user->isDoubleAuthGA()) {
-            echo "GA";
-        } else {
-            echo "Email";
-        }
-    }
     
     public function authcodeAction() {
         // User sent an auth code
@@ -56,32 +46,26 @@ class session extends l\Controller {
 							$resp['message'] = 'validate';
 						}
 						elseif($user->getDoubleAuth()) {
+                            $isValid = false;
                             if($user->isDoubleAuthGA()) {
                                 $googleAuth = new ga\GoogleAuthenticator();
                                 if ($googleAuth->checkCode($secret, $data->code)) {
-                                    $resp['code'] = 200;
-                                    $resp['status'] = 'success';
-                                    $resp['token'] = $this->buildToken($data->uid);
-                                    $resp['data']['cek'] = $cek;
-                                    $resp['data']['uid'] = intval($data->uid);
-                                } else {
-                                    $resp['code'] = 401;
-                                    $resp['message'] = 'badCode';
-                                }
+                                    $isValid = true; // Double auth code is ok, send token
                             } else { //2FA with mail
                                 $code = $user->getCode();
                                 if($code && $code === $data->code) {
-                                    // Double auth code is ok, send token
-                                    $resp['code'] = 200;
-                                    $resp['status'] = 'success';
-                                    $resp['token'] = $this->buildToken($data->uid);
-                                    $resp['data']['cek'] = $cek;
-                                    $resp['data']['uid'] = intval($data->uid);
-                                } else {
-                                    // Wrong code
-                                    $resp['code'] = 401;
-                                    $resp['message'] = 'badCode';
-                                }
+                                    $isValid = true; // Double auth code is ok, send token
+                            }
+                            if($isValid) {
+                                $resp['code'] = 200;
+                                $resp['status'] = 'success';
+                                $resp['token'] = $this->buildToken($data->uid);
+                                $resp['data']['cek'] = $cek;
+                                $resp['data']['uid'] = intval($data->uid);
+                            } else {
+                                // Wrong code
+                                $resp['code'] = 401;
+                                $resp['message'] = 'badCode';
                             }
 						}
 						else {

@@ -31,16 +31,27 @@ class GoogleAuthenticator extends l\Controller {
 		$method = h\httpMethodsData::getMethod();
 		$data = h\httpMethodsData::getValues();
 
-		if($method !== 'get') {
+		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
         elseif(isset($data->username)) {
             $googleAuth = new ga\GoogleAuthenticator();
             
             $secret = strtoupper(str_replace($this->_forbiddenChars, "A", md5($data->username.conf\confGoogleAuthenticator::salt)));
+            
+            $url = ga\GoogleQrUrl::generate($data->username, $secret, 'Muonium');
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Muonium');
+            $result = curl_exec($ch);
+            curl_close($ch);
+            
+            
             $resp['code'] = 200;
             $resp['status'] = 'success';
-            $resp['data']['QRcode'] = ga\GoogleQrUrl::generate($data->username, $secret, 'Muonium');
+            $resp['data']['QRcode'] = base64_encode($result);
             
         } else {
 			$resp['message'] = 'emptyField';
