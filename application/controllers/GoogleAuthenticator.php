@@ -52,6 +52,7 @@ class GoogleAuthenticator extends l\Controller {
             $resp['code'] = 200;
             $resp['status'] = 'success';
             $resp['data']['QRcode'] = base64_encode($result);
+            $resp['data']['secretKey'] = $secret;
             
         } else {
 			$resp['message'] = 'emptyField';

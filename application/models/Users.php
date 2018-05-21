@@ -11,7 +11,7 @@ class Users extends l\Model {
         5   registration_date   int(11)
         6   last_connection     int(11)
         7   cek                 varchar(330)
-        8   double_auth         tinyint(1)      0 : Double auth not available for this user, 1 : Double auth available for this user
+        8   double_auth         tinyint(1)      0 : Double auth not available for this user, 1 : Double auth available for this user by mail, 2 : Double auth available for this user by Googla Authenticator
         9   auth_code           varchar(8)
     */
 
