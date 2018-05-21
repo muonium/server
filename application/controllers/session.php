@@ -3,14 +3,26 @@ namespace application\controllers;
 use \library as h;
 use \library\MVC as l;
 use \application\models as m;
+use \library\GA as ga;
 
 class session extends l\Controller {
     private $_message;
+    private $_forbiddenChars = ["0", "1", "8", "9"];
 
 	function __construct() {
         parent::__construct();
     }
 
+    public function isDoubleAuthGAAction() {
+        $id = 1;
+        $user = new m\Users($id);
+        if($user->isDoubleAuthGA()) {
+            echo "GA";
+        } else {
+            echo "Email";
+        }
+    }
+    
     public function authcodeAction() {
         // User sent an auth code
         sleep(1);
@@ -44,19 +56,33 @@ class session extends l\Controller {
 							$resp['message'] = 'validate';
 						}
 						elseif($user->getDoubleAuth()) {
-							$code = $user->getCode();
-							if($code && $code === $data->code) {
-								// Double auth code is ok, send token
-								$resp['code'] = 200;
-								$resp['status'] = 'success';
-								$resp['token'] = $this->buildToken($data->uid);
-								$resp['data']['cek'] = $cek;
-                                $resp['data']['uid'] = intval($data->uid);
-							} else {
-								// Wrong code
-								$resp['code'] = 401;
-			                    $resp['message'] = 'badCode';
-			                }
+                            if($user->isDoubleAuthGA()) {
+                                $googleAuth = new ga\GoogleAuthenticator();
+                                if ($googleAuth->checkCode($secret, $data->code)) {
+                                    $resp['code'] = 200;
+                                    $resp['status'] = 'success';
+                                    $resp['token'] = $this->buildToken($data->uid);
+                                    $resp['data']['cek'] = $cek;
+                                    $resp['data']['uid'] = intval($data->uid);
+                                } else {
+                                    $resp['code'] = 401;
+                                    $resp['message'] = 'badCode';
+                                }
+                            } else { //2FA with mail
+                                $code = $user->getCode();
+                                if($code && $code === $data->code) {
+                                    // Double auth code is ok, send token
+                                    $resp['code'] = 200;
+                                    $resp['status'] = 'success';
+                                    $resp['token'] = $this->buildToken($data->uid);
+                                    $resp['data']['cek'] = $cek;
+                                    $resp['data']['uid'] = intval($data->uid);
+                                } else {
+                                    // Wrong code
+                                    $resp['code'] = 401;
+                                    $resp['message'] = 'badCode';
+                                }
+                            }
 						}
 						else {
 							// Double auth is disabled but password is still ok, then, send token
@@ -167,22 +193,27 @@ class session extends l\Controller {
                         if(!($mUserVal->getKey())) {
                             // Unable to find key - Validation is done
                             if($new_user->getDoubleAuth()) {
-                                // Double auth : send an email with a code
-                                $code = $this->generateCode();
-                                $mail = new l\Mail();
-								$mail->delay(60, $id, $this->getRedis());
-                                $mail->_to = $email;
-                                $mail->_subject = "Muonium - ".self::$txt->Profile->doubleAuth;
-                                $mail->_message = str_replace("[key]", $code, self::$txt->Login->doubleAuthMessage);
                                 $resp['data'] = [];
                                 $resp['data']['cek'] = $cek; // the CEK is already url encoded in the database
                                 $resp['data']['uid'] = $id;
-                                if($mail->send() === 'wait') {
-									$resp['message'] = 'wait';
-								} else {
-                                    $new_user->updateCode($code);
-									$resp['message'] = 'doubleAuth';
-								}
+                                if(!$new_user->isDoubleAuthGA()) {
+                                    // Double auth : send an email with a code
+                                    $code = $this->generateCode();
+                                    $mail = new l\Mail();
+                                    $mail->delay(60, $id, $this->getRedis());
+                                    $mail->_to = $email;
+                                    $mail->_subject = "Muonium - ".self::$txt->Profile->doubleAuth;
+                                    $mail->_message = str_replace("[key]", $code, self::$txt->Login->doubleAuthMessage);
+                                    if($mail->send() === 'wait') {
+                                        $resp['message'] = 'wait';
+                                    } else {
+                                        $new_user->updateCode($code);
+                                        $resp['message'] = 'doubleAuth';
+                                    }
+                                } else {
+                                    $resp['message'] = 'doubleAuth';
+                                }
+                                
                             }
                             else { // Logged
 								$resp['token'] = $this->buildToken($id);

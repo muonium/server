@@ -109,10 +109,19 @@ class Users extends l\Model {
 
     function getDoubleAuth() {
 		if($this->id === null) return false;
-        $req = self::$_sql->prepare("SELECT double_auth FROM users WHERE id = ? AND double_auth = '1'");
+        $req = self::$_sql->prepare("SELECT double_auth FROM users WHERE id = ? AND double_auth = '1' OR double_auth = '2'");
         $req->execute([$this->id]);
         if($req->rowCount() === 0) return false;
         return true;
+    }
+    
+    function isDoubleAuthGA() {
+        if($this->id === null) return false;
+        $req = self::$_sql->prepare("SELECT double_auth FROM users WHERE id = ? AND double_auth = '1' OR double_auth = '2'");
+        $req->execute([$this->id]);
+        if($req->rowCount() === 0) return false;
+        $res = $req->fetch(\PDO::FETCH_ASSOC);
+        return $res['double_auth'] === 2;
     }
 
     function getCode() {
