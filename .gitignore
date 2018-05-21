@@ -3,5 +3,6 @@ config/confMail.php
 config/confPayments.php
 config/confRedis.php
 config/secretKey.php
+config/confGoogleAuthenticator.php
 public
 vendor/*

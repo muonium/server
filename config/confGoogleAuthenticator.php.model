@@ -1,0 +1,6 @@
+<?php
+namespace config;
+// Class used for Google Authenticator
+class confGoogleAuthenticator {
+    const salt = '';
+}
