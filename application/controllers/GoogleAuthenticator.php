@@ -37,7 +37,8 @@ class GoogleAuthenticator extends l\Controller {
         elseif(isset($data->username)) {
             $googleAuth = new ga\GoogleAuthenticator();
             
-            $secret = strtoupper(str_replace($this->_forbiddenChars, "A", md5($data->username.conf\confGoogleAuthenticator::salt)));
+            $secret = $data->username.conf\confGoogleAuthenticator::salt;
+            $secret = (new ga\FixedBitNotation(5, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', true, true))->encode($secret);
             
             $url = ga\GoogleQrUrl::generate($data->username, $secret, 'Muonium');
             

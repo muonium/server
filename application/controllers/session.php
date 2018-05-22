@@ -4,6 +4,7 @@ use \library as h;
 use \library\MVC as l;
 use \application\models as m;
 use \library\GA as ga;
+use \config as conf;
 
 class session extends l\Controller {
     private $_message;
@@ -28,7 +29,7 @@ class session extends l\Controller {
 		elseif($this->isLogged() === false) {
 			// User is not logged
 			if(isset($data->uid) && isset($data->password) && isset($data->code)) {
-				if(is_pos_digit($data->uid) && strlen($data->code) === 8) {
+				if(is_pos_digit($data->uid) && (strlen($data->code) === 8 || strlen($data->code) === 6)) {
 					$user = new m\Users($data->uid);
 					$user->password = urldecode($data->password);
 					$pass = $user->getPassword();
@@ -49,12 +50,18 @@ class session extends l\Controller {
                             $isValid = false;
                             if($user->isDoubleAuthGA()) {
                                 $googleAuth = new ga\GoogleAuthenticator();
-                                if ($googleAuth->checkCode($secret, $data->code)) {
+                                
+                                $secret = $user->getLogin().conf\confGoogleAuthenticator::salt;
+                                $secret = (new ga\FixedBitNotation(5, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', true, true))->encode($secret);
+                                
+                                if($googleAuth->checkCode($secret, $data->code)) {
                                     $isValid = true; // Double auth code is ok, send token
+                                }
                             } else { //2FA with mail
                                 $code = $user->getCode();
                                 if($code && $code === $data->code) {
                                     $isValid = true; // Double auth code is ok, send token
+                                }
                             }
                             if($isValid) {
                                 $resp['code'] = 200;
@@ -193,11 +200,12 @@ class session extends l\Controller {
                                     } else {
                                         $new_user->updateCode($code);
                                         $resp['message'] = 'doubleAuth';
+                                        $resp['data']['doubleAuthMethod'] = 1;
                                     }
                                 } else {
                                     $resp['message'] = 'doubleAuth';
+                                    $resp['data']['doubleAuthMethod'] = 2;
                                 }
-                                
                             }
                             else { // Logged
 								$resp['token'] = $this->buildToken($id);
