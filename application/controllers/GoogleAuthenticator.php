@@ -1,7 +1,5 @@
 <?php
-
 namespace application\controllers;
-
 use \library as h;
 use \library\MVC as l;
 use \Muonium\GoogleAuthenticator as ga;
@@ -36,25 +34,25 @@ class GoogleAuthenticator extends l\Controller {
 		}
         elseif(isset($data->username)) {
             $googleAuth = new ga\GoogleAuthenticator();
-
-            $secret = $data->username.conf\confGoogleAuthenticator::salt;
+            $username = str_replace(':', '', strtolower($data->username));
+            $secret = $username.conf\confGoogleAuthenticator::salt;
             $secret = (new ga\FixedBitNotation(5, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', true, true))->encode($secret);
 
-            $url = ga\GoogleQrUrl::generate($data->username, $secret, 'Muonium');
+            $url = ga\GoogleQrUrl::generate($username, $secret, 'Muonium');
 
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HEADER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_USERAGENT, 'Muonium');
             $result = curl_exec($ch);
             curl_close($ch);
-
 
             $resp['code'] = 200;
             $resp['status'] = 'success';
             $resp['data']['QRcode'] = base64_encode($result);
             $resp['data']['secretKey'] = $secret;
-
         } else {
 			$resp['message'] = 'emptyField';
 		}
@@ -63,5 +61,3 @@ class GoogleAuthenticator extends l\Controller {
 		echo json_encode($resp);
     }
 }
-
-?>

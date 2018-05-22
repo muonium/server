@@ -3,7 +3,7 @@ namespace application\controllers;
 use \library as h;
 use \library\MVC as l;
 use \application\models as m;
-use \library\GA as ga;
+use \Muonium\GoogleAuthenticator as ga;
 use \config as conf;
 
 class session extends l\Controller {
@@ -13,7 +13,7 @@ class session extends l\Controller {
 	function __construct() {
         parent::__construct();
     }
-    
+
     public function authcodeAction() {
         // User sent an auth code
         sleep(1);
@@ -50,10 +50,10 @@ class session extends l\Controller {
                             $isValid = false;
                             if($user->isDoubleAuthGA()) {
                                 $googleAuth = new ga\GoogleAuthenticator();
-                                
-                                $secret = $user->getLogin().conf\confGoogleAuthenticator::salt;
+                                $username = str_replace(':', '', strtolower($user->getLogin()));
+                                $secret = $username.conf\confGoogleAuthenticator::salt;
                                 $secret = (new ga\FixedBitNotation(5, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', true, true))->encode($secret);
-                                
+
                                 if($googleAuth->checkCode($secret, $data->code)) {
                                     $isValid = true; // Double auth code is ok, send token
                                 }
