@@ -183,10 +183,8 @@ class session extends l\Controller {
 
                         if(!($mUserVal->getKey())) {
                             // Unable to find key - Validation is done
+                            $resp['data'] = [];
                             if($new_user->getDoubleAuth()) {
-                                $resp['data'] = [];
-                                $resp['data']['cek'] = $cek; // the CEK is already url encoded in the database
-                                $resp['data']['uid'] = $id;
                                 if(!$new_user->isDoubleAuthGA()) {
                                     // Double auth : send an email with a code
                                     $code = $this->generateCode();
@@ -210,7 +208,6 @@ class session extends l\Controller {
                             else { // Logged
 								$resp['token'] = $this->buildToken($id);
 							}
-                            $resp['data'] = [];
                             $resp['data']['cek'] = $cek; // the CEK is already url encoded in the database
                             $resp['data']['uid'] = $id;
                         }

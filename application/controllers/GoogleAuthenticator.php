@@ -7,9 +7,6 @@ use \application\models as m;
 use \config as conf;
 
 class GoogleAuthenticator extends l\Controller {
-
-    private $_forbiddenChars = ["0", "1", "8", "9"];
-
     function __construct() {
         parent::__construct();
     }

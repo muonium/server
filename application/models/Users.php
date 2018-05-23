@@ -114,7 +114,7 @@ class Users extends l\Model {
         if($req->rowCount() === 0) return false;
         return true;
     }
-    
+
     function isDoubleAuthGA() {
         if($this->id === null) return false;
         $req = self::$_sql->prepare("SELECT double_auth FROM users WHERE id = ? AND double_auth = '1' OR double_auth = '2'");
@@ -205,7 +205,7 @@ class Users extends l\Model {
     }
 
     function updateDoubleAuth($state) {
-		if($this->id === null || ($state != 0 && $state != 1)) return false;
+		if($this->id === null || ($state != 0 && $state != 1 && $state != 2)) return false;
         $req = self::$_sql->prepare("UPDATE users SET double_auth = ? WHERE id = ?");
         return $req->execute([$state, $this->id]);
     }
