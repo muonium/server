@@ -210,6 +210,7 @@ class session extends l\Controller {
 							}
                             $resp['data']['cek'] = $cek; // the CEK is already url encoded in the database
                             $resp['data']['uid'] = $id;
+                            $resp['data']['username'] = $new_user->getLogin();
                         }
                         else {
                             // Key found - User needs to validate its account (double auth only for validated accounts)
