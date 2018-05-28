@@ -8,8 +8,11 @@ use \config as conf;
 
 class GoogleAuthenticator extends l\Controller {
     function __construct() {
-        parent::__construct();
-    }
+		parent::__construct([
+			'mustBeLogged' => true
+		]);
+		$this->redis = $this->getRedis();
+	}
 
     public function DefaultAction() {
 		header("Content-type: application/json");
@@ -29,12 +32,17 @@ class GoogleAuthenticator extends l\Controller {
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
-        elseif(isset($data->username)) {
+        else {
+            $user = new m\Users($this->_uid);
+            
+            $username = $user->getLogin();
+            
             $googleAuth = new ga\GoogleAuthenticator();
-            $username = str_replace(':', '', strtolower($data->username));
-            $secret = $username.conf\confGoogleAuthenticator::salt;
+            $secret = bin2hex(openssl_random_pseudo_bytes(10));
             $secret = (new ga\FixedBitNotation(5, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', true, true))->encode($secret);
 
+            $user->updateSecretKey($secret);
+            
             $url = ga\GoogleQrUrl::generate($username, $secret, 'Muonium');
 
             $ch = curl_init();
@@ -50,9 +58,7 @@ class GoogleAuthenticator extends l\Controller {
             $resp['status'] = 'success';
             $resp['data']['QRcode'] = base64_encode($result);
             $resp['data']['secretKey'] = $secret;
-        } else {
-			$resp['message'] = 'emptyField';
-		}
+        }
 
 		http_response_code($resp['code']);
 		echo json_encode($resp);

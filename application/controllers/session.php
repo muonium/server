@@ -50,9 +50,7 @@ class session extends l\Controller {
                             $isValid = false;
                             if($user->isDoubleAuthGA()) {
                                 $googleAuth = new ga\GoogleAuthenticator();
-                                $username = str_replace(':', '', strtolower($user->getLogin()));
-                                $secret = $username.conf\confGoogleAuthenticator::salt;
-                                $secret = (new ga\FixedBitNotation(5, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', true, true))->encode($secret);
+                                $secret = $user->getSecretKeyGA();
 
                                 if($googleAuth->checkCode($secret, $data->code)) {
                                     $isValid = true; // Double auth code is ok, send token

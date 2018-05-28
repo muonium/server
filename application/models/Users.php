@@ -13,6 +13,7 @@ class Users extends l\Model {
         7   cek                 varchar(330)
         8   double_auth         tinyint(1)      0 : Double auth not available for this user, 1 : Double auth available for this user by mail, 2 : Double auth available for this user by Googla Authenticator
         9   auth_code           varchar(8)
+        10  ga_secret           varchar(32)
     */
 
     protected $id = null;
@@ -124,6 +125,22 @@ class Users extends l\Model {
         return $res['double_auth'] === 2;
     }
 
+    function getSecretKeyGA($id = null) {
+        $id = $id === null ? $this->id : $id;
+		if(!is_numeric($id)) return false;
+		$req = self::$_sql->prepare("SELECT ga_secret FROM users WHERE id = ?");
+        $req->execute([$id]);
+        if($req->rowCount() === 0) return false;
+        $res = $req->fetch(\PDO::FETCH_ASSOC);
+        return $res['ga_secret'];
+    }
+    
+    function updateSecretKey($secretKey) {
+        if($this->id === null) return false;
+        $req = self::$_sql->prepare("UPDATE users SET ga_secret = ? WHERE id = ?");
+        return $req->execute([$secretKey, $this->id]);
+    }
+    
     function getCode() {
 		if($this->id === null) return false;
         $req = self::$_sql->prepare("SELECT auth_code FROM users WHERE id = ?");

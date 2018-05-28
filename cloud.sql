@@ -130,7 +130,8 @@ CREATE TABLE `users` (
   `last_connection` int(11) NOT NULL,
   `cek` varchar(330) NOT NULL,
   `double_auth` tinyint(1) NOT NULL,
-  `auth_code` varchar(8) NOT NULL
+  `auth_code` varchar(8) NOT NULL,
+  `ga_secret` varchar(32) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
