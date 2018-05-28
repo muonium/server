@@ -193,7 +193,7 @@ class Users extends l\Model {
 			'auth_code' => ''
 		]);
     }
-
+    
 	function Connection() {
 		if(!isset($this->email) || !isset($this->password)) return false;
 		$req = self::$_sql->prepare("SELECT id FROM users WHERE email = ? AND password = ?");
@@ -201,6 +201,52 @@ class Users extends l\Model {
         if($req->rowCount()) return true;
         return false;
 	}
+
+    function deleteBackupCodes() {
+        if($this->id === null) return false;
+        $req = self::$_sql->prepare("DELETE FROM user_codes WHERE id_user = ?");
+        return $req->execute([$this->id]);
+    }
+    
+    function deleteBackupCode($backupCode) {
+        if($this->id === null || $backupCode === null) return false;
+        $req = self::$_sql->prepare("DELETE FROM user_codes WHERE id_user = ? AND code = ?");
+        return $req->execute([$this->id, $backupCode]);
+    }
+    
+    function isBackupCodeValid($backupCode) {
+		if($this->id === null || $backupCode === null) return false;
+        $req = self::$_sql->prepare("SELECT id FROM user_codes WHERE id_user = ? AND code = ?");
+        $req->execute([$this->id, $backupCode]);
+        if($req->rowCount()) return true;
+        return false;
+    }
+    
+    function getBackupCodes() {
+        if($this->id === null) return false;
+        $req = self::$_sql->prepare("SELECT code FROM user_codes WHERE id_user = ?");
+        $req->execute([$this->id]);
+        if($req->rowCount() === 0) return false;
+        $res = $req->fetchAll(\PDO::FETCH_COLUMN, 0);
+        return $res;
+    }
+    
+    function generateBackupCodes() {
+        $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $charactersLength = strlen($characters);
+        
+        for($i = 0; $i < 10; $i++) { //10 codes
+            $backupCode = "";
+            for ($j = 0; $j < 10; $j++) { //10 chars each
+                $backupCode .= $characters[rand(0, $charactersLength - 1)];
+            }
+            $status = $this->insert('user_codes', [
+                'id' => null,
+                'id_user' => $this->id,
+                'code' => $backupCode
+            ]);
+        }
+    }
 
     function updateLogin() {
 		if($this->id === null) return false;

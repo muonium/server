@@ -29,12 +29,12 @@ class session extends l\Controller {
 		elseif($this->isLogged() === false) {
 			// User is not logged
 			if(isset($data->uid) && isset($data->password) && isset($data->code)) {
-				if(is_pos_digit($data->uid) && (strlen($data->code) === 8 || strlen($data->code) === 6)) {
+				if(is_pos_digit($data->uid) && (strlen($data->code) === 6 || strlen($data->code) === 8 || strlen($data->code) === 10)) {
 					$user = new m\Users($data->uid);
 					$user->password = urldecode($data->password);
 					$pass = $user->getPassword();
 					$cek = $user->getCek();
-
+                    
 					if($pass !== false && password_verify($user->password, $pass)) {
 						// Password is ok
 						$user->updateLastConnection();
@@ -54,6 +54,11 @@ class session extends l\Controller {
 
                                 if($googleAuth->checkCode($secret, $data->code)) {
                                     $isValid = true; // Double auth code is ok, send token
+                                } else {
+                                    if($user->isBackupCodeValid($data->code)) {
+                                        $user->deleteBackupCode($data->code);
+                                        $isValid = true;
+                                    }
                                 }
                             } else { //2FA with mail
                                 $code = $user->getCode();

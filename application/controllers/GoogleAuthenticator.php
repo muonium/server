@@ -42,6 +42,9 @@ class GoogleAuthenticator extends l\Controller {
             $secret = (new ga\FixedBitNotation(5, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', true, true))->encode($secret);
 
             $user->updateSecretKey($secret);
+            $user->deleteBackupCodes();
+            $user->generateBackupCodes();
+            $backupCodes = $user->getBackupCodes();
             
             $url = ga\GoogleQrUrl::generate($username, $secret, 'Muonium');
 
@@ -58,6 +61,7 @@ class GoogleAuthenticator extends l\Controller {
             $resp['status'] = 'success';
             $resp['data']['QRcode'] = base64_encode($result);
             $resp['data']['secretKey'] = $secret;
+            $resp['data']['backupCodes'] = $backupCodes;
         }
 
 		http_response_code($resp['code']);
