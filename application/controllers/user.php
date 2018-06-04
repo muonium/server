@@ -2,7 +2,6 @@
 namespace application\controllers;
 use \library as h;
 use \library\MVC as l;
-use \Muonium\GoogleAuthenticator as ga;
 use \application\models as m;
 
 class user extends l\Controller {
@@ -161,30 +160,32 @@ class user extends l\Controller {
 			$resp['token'] = $this->_token;
 	        $this->_modelUser = new m\Users($this->_uid);
 	        $s = 0;
-            $isValid = false;
-            
+            $isValid = true;
+            $gaEnabled = $this->_modelUser->isDoubleAuthGA();
 	        if(isset($data->doubleAuth) && ($data->doubleAuth === 1 || $data->doubleAuth === 2)) {
 				$s = $data->doubleAuth;
-                
-                if($this->_modelUser->isCodeValid($data->code)) {
-                    $isValid = true;
-                    if($this->_modelUser->isDoubleAuthGA()) {
+			}
+            if($s === 2 || $gaEnabled) { // Try to enable/disable ga but a code is needed
+                if(!isset($data->code) || !($this->_modelUser->isCodeValid($data->code))) {
+                    $isValid = false; // Empty or wrong code
+                }
+            }
+
+            if($isValid) {
+    	        if($this->_modelUser->updateDoubleAuth($s)) {
+                    if($gaEnabled) {
                         $this->_modelUser->deleteBackupCodes();
                         $this->_modelUser->deleteSecretKey();
                     }
-                }
-                if(!($isValid)) {
-                    $resp['code'] = 403;
-                    $resp['status'] = 'error';
-				    $resp['message'] = 'badCode';
-                } else {
-                    if($this->_modelUser->updateDoubleAuth($s)) {
-                        $resp['code'] = 200;
-                        $resp['status'] = 'success';
-                   }
-                }
+    				$resp['code'] = 200;
+    				$resp['status'] = 'success';
+    	        }
+            } else {
+                $resp['code'] = 403;
+                $resp['status'] = 'error';
+				$resp['message'] = 'badCode';
             }
-        }
+		}
 
 		http_response_code($resp['code']);
 		echo json_encode($resp);
@@ -290,10 +291,6 @@ class user extends l\Controller {
 
 					if(!($this->_modelUser->EmailExists())) {
 						if(!($this->_modelUser->LoginExists())) {
-							if(isset($data->doubleAuth) && ($data->doubleAuth === 1 || $data->doubleAuth === 2)) {
-								$this->_modelUser->setDoubleAuth($data->doubleAuth);
-							}
-
 							if($this->_modelUser->Insertion()) {
 								// Send registration mail with validation key
 								$uid = $this->_modelUser->getLastInsertedId();
