@@ -175,7 +175,7 @@ class user extends l\Controller {
                 }
                 if(!($isValid)) {
                     $resp['code'] = 403;
-                    $resp['error'] = 'success';
+                    $resp['status'] = 'error';
 				    $resp['message'] = 'badCode';
                 } else {
                     if($this->_modelUser->updateDoubleAuth($s)) {
