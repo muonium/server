@@ -1,6 +1,7 @@
 <?php
 namespace application\models;
 use \library\MVC as l;
+use \Muonium\GoogleAuthenticator as ga;
 
 class Users extends l\Model {
     /* users table
@@ -225,6 +226,21 @@ class Users extends l\Model {
         $req = self::$_sql->prepare("SELECT id FROM user_codes WHERE id_user = ? AND code = ?");
         $req->execute([$this->id, $backupCode]);
         if($req->rowCount()) return true;
+        return false;
+    }
+    
+    function isCodeValid($code) {
+        $googleAuth = new ga\GoogleAuthenticator();
+        $secret = $this->getSecretKeyGA();
+        
+        if($googleAuth->checkCode($secret, $code)) {
+            return true;
+        } else {
+            if($this->isBackupCodeValid($code)) {
+                $this->deleteBackupCode($code);
+                return true;
+            }
+        }
         return false;
     }
     

@@ -161,35 +161,29 @@ class user extends l\Controller {
 			$resp['token'] = $this->_token;
 	        $this->_modelUser = new m\Users($this->_uid);
 	        $s = 0;
-            $isValid = true;
+            $isValid = false;
             
 	        if(isset($data->doubleAuth) && ($data->doubleAuth === 1 || $data->doubleAuth === 2)) {
 				$s = $data->doubleAuth;
-                if($this->_modelUser->isDoubleAuthGA() || $data->doubleAuth === 2) {
-                    $googleAuth = new ga\GoogleAuthenticator();
-                    $secret = $this->_modelUser->getSecretKeyGA();
-                    
-                    if(!($googleAuth->checkCode($secret, $data->code))) {
-                        $isValid = false;
-                    }
-                    
+                
+                if($this->_modelUser->isCodeValid($data->code)) {
+                    $isValid = true;
                     if($this->_modelUser->isDoubleAuthGA()) {
                         $this->_modelUser->deleteBackupCodes();
                         $this->_modelUser->deleteSecretKey();
                     }
                 }
-			}
-            
-            if(!($isValid)) {
-                $resp['code'] = 403;
-				$resp['status'] = 'badCode';
-            } else {
-                if($this->_modelUser->updateDoubleAuth($s)) {
-				    $resp['code'] = 200;
-				    $resp['status'] = 'success';
-	           }
+                if(!($isValid)) {
+                    $resp['code'] = 403;
+				    $resp['status'] = 'badCode';
+                } else {
+                    if($this->_modelUser->updateDoubleAuth($s)) {
+                        $resp['code'] = 200;
+                        $resp['status'] = 'success';
+                   }
+                }
             }
-		}
+        }
 
 		http_response_code($resp['code']);
 		echo json_encode($resp);
