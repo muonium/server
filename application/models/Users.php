@@ -208,6 +208,12 @@ class Users extends l\Model {
         return $req->execute([$this->id]);
     }
     
+    function deleteSecretKey() {
+        if($this->id === null) return false;
+        $req = self::$_sql->prepare("UPDATE users SET ga_secret = NULL WHERE id = ?");
+        return $req->execute([$this->id]);
+    }
+    
     function deleteBackupCode($backupCode) {
         if($this->id === null || $backupCode === null) return false;
         $req = self::$_sql->prepare("DELETE FROM user_codes WHERE id_user = ? AND code = ?");

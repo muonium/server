@@ -162,6 +162,10 @@ class user extends l\Controller {
 	        $s = 0;
 	        if(isset($data->doubleAuth) && ($data->doubleAuth === 1 || $data->doubleAuth === 2)) {
 				$s = $data->doubleAuth;
+                if($this->_modelUser->isDoubleAuthGA()) {
+                    $this->_modelUser->deleteBackupCodes();
+                    $this->_modelUser->deleteSecretKey();
+                }
 			}
 	        if($this->_modelUser->updateDoubleAuth($s)) {
 				$resp['code'] = 200;
