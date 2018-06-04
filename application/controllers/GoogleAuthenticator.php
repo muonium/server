@@ -23,7 +23,7 @@ class GoogleAuthenticator extends l\Controller {
 		echo json_encode($resp);
 	}
 
-    public function generateQRcodeAction() {
+    public function generateAction() {
         header("Content-type: application/json");
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
@@ -62,6 +62,43 @@ class GoogleAuthenticator extends l\Controller {
             $resp['data']['QRcode'] = base64_encode($result);
             $resp['data']['secretKey'] = $secret;
             $resp['data']['backupCodes'] = $backupCodes;
+        }
+
+		http_response_code($resp['code']);
+		echo json_encode($resp);
+    }
+    
+    public function backupCodesAction() {
+        header("Content-type: application/json");
+		$resp = self::RESP;
+		$method = h\httpMethodsData::getMethod();
+		$data = h\httpMethodsData::getValues();
+
+		if($method !== 'get') {
+			$resp['code'] = 405; // Method Not Allowed
+		}
+        else {
+            $user = new m\Users($this->_uid);
+            if($user->isDoubleAuthGA()) {
+                $googleAuth = new ga\GoogleAuthenticator();
+                $secret = $user->getSecretKeyGA();
+                
+                if($googleAuth->checkCode($secret, $data->code)) {
+                    $backupCodes = $user->getBackupCodes();
+
+                    $resp['code'] = 200;
+                    $resp['status'] = 'success';
+                    $resp['data']['backupCodes'] = $backupCodes;
+                } else {
+                    $resp['code'] = 403;
+                    $resp['status'] = 'error';
+                    $resp['message'] = 'badCode';
+                }
+            } else {
+                $resp['code'] = 401;
+                $resp['status'] = 'error';
+                $resp['message'] = 'notDoubleAuthGA';
+            }
         }
 
 		http_response_code($resp['code']);
