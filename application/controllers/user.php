@@ -202,7 +202,7 @@ class user extends l\Controller {
 		elseif($this->isLogged() === true) {
 			$resp['token'] = $this->_token;
 	        $this->_modelUser = new m\Users($this->_uid);
-	        if($this->_modelUser->updateLanguage(self::$userLanguage)) {
+	        if($this->_modelUser->setLang(self::$userLanguage)) {
 				$resp['code'] = 200;
 				$resp['status'] = 'success';
 	        }

@@ -312,7 +312,16 @@ class Users extends l\Model {
 	    return $req->execute([time(), $this->id]);
 	}
 
-    function updateLanguage($lang) {
+    function getLang() {
+		if($this->id === null) return 'en';
+	    $req = self::$_sql->prepare("SELECT lang FROM users WHERE id = ?");
+        $req->execute([$this->id]);
+        if($req->rowCount() === 0) return 'en';
+        $res = $req->fetch(\PDO::FETCH_ASSOC);
+        return ($res['lang'] === null || $res['lang'] == '') ? 'en' : $res['lang'];
+	}
+
+    function setLang($lang) {
 		if($this->id === null) return false;
 	    $req = self::$_sql->prepare("UPDATE users SET lang = ? WHERE id = ?");
 	    return $req->execute([$lang, $this->id]);

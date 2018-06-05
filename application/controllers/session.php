@@ -34,11 +34,11 @@ class session extends l\Controller {
 					$user->password = urldecode($data->password);
 					$pass = $user->getPassword();
 					$cek = $user->getCek();
-                    
+                    $lang = $user->getLang();
+
 					if($pass !== false && password_verify($user->password, $pass)) {
 						// Password is ok
 						$user->updateLastConnection();
-						$user->updateLanguage(self::$userLanguage);
 						$mUserVal = new m\UserValidation($data->uid);
 						if($mUserVal->getKey()) {
 							// Key found - User needs to validate its account (double auth only for validated accounts)
@@ -72,6 +72,7 @@ class session extends l\Controller {
                                 $resp['token'] = $this->buildToken($data->uid);
                                 $resp['data']['cek'] = $cek;
                                 $resp['data']['uid'] = intval($data->uid);
+                                $resp['data']['lang'] = $lang;
                             } else {
                                 // Wrong code
                                 $resp['code'] = 401;
@@ -84,6 +85,8 @@ class session extends l\Controller {
 							$resp['status'] = 'success';
 							$resp['token'] = $this->buildToken($data->uid);
 							$resp['data']['cek'] = $cek;
+                            $resp['data']['uid'] = intval($data->uid);
+                            $resp['data']['lang'] = $lang;
 						}
 					}
 					else {
@@ -173,6 +176,7 @@ class session extends l\Controller {
                 $new_user->id = $id;
                 $pass = $new_user->getPassword();
 				$cek = $new_user->getCek();
+                $lang = $new_user->getLang();
 
                 if($pass !== false) {
                     if(password_verify($new_user->password, $pass)) {
@@ -181,7 +185,6 @@ class session extends l\Controller {
 						$resp['status'] = 'success';
 
 						$new_user->updateLastConnection();
-						$new_user->updateLanguage(self::$userLanguage);
                         $mUserVal = new m\UserValidation($id);
 
                         if(!($mUserVal->getKey())) {
@@ -213,7 +216,7 @@ class session extends l\Controller {
 							}
                             $resp['data']['cek'] = $cek; // the CEK is already url encoded in the database
                             $resp['data']['uid'] = $id;
-                            $resp['data']['username'] = $new_user->getLogin();
+                            $resp['data']['lang'] = $lang;
                         }
                         else {
                             // Key found - User needs to validate its account (double auth only for validated accounts)
