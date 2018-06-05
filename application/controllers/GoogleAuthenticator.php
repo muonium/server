@@ -132,6 +132,7 @@ class GoogleAuthenticator extends l\Controller {
                 $secret = $user->getSecretKeyGA();
 
                 if($user->isCodeValid($data->code)) {
+                    $user->deleteBackupCodes();
                     $user->generateBackupCodes();
                     $backupCodes = $user->getBackupCodes();
 
