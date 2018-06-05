@@ -30,6 +30,7 @@ class GoogleAuthenticator extends l\Controller {
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
 		$data = h\httpMethodsData::getValues();
+        $resp['token'] = $this->_token;
 
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
@@ -84,6 +85,7 @@ class GoogleAuthenticator extends l\Controller {
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
 		$data = h\httpMethodsData::getValues();
+        $resp['token'] = $this->_token;
 
 		if($method !== 'get') {
 			$resp['code'] = 405; // Method Not Allowed
@@ -121,17 +123,20 @@ class GoogleAuthenticator extends l\Controller {
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
 		$data = h\httpMethodsData::getValues();
+        $resp['token'] = $this->_token;
 
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
         else {
+            
             $user = new m\Users($this->_uid);
             if($user->isDoubleAuthGA()) {
                 $googleAuth = new ga\GoogleAuthenticator();
                 $secret = $user->getSecretKeyGA();
 
                 if($user->isCodeValid($data->code)) {
+                    $user->deleteBackupCodes();
                     $user->generateBackupCodes();
                     $backupCodes = $user->getBackupCodes();
 
@@ -149,8 +154,8 @@ class GoogleAuthenticator extends l\Controller {
                 $resp['message'] = 'notDoubleAuthGA';
             }
         }
-
-		http_response_code($resp['code']);
+		
+        http_response_code($resp['code']);
 		echo json_encode($resp);
     }
 }
