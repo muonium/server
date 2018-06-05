@@ -41,6 +41,7 @@ class GoogleAuthenticator extends l\Controller {
                 if(!$gaRedis) $gaRedis = 0;
                 $resp['code'] = 200;
                 $resp['status'] = 'success';
+                $resp['token'] = $this->_token;
 
                 if(intval($gaRedis) <= time()) {
                     $this->redis->set('uid:'.$this->_uid.':ga', time() + 30);
@@ -89,6 +90,8 @@ class GoogleAuthenticator extends l\Controller {
 			$resp['code'] = 405; // Method Not Allowed
 		}
         else {
+            $resp['token'] = $this->_token;
+            
             $user = new m\Users($this->_uid);
             if($user->isDoubleAuthGA()) {
                 $googleAuth = new ga\GoogleAuthenticator();
@@ -126,6 +129,8 @@ class GoogleAuthenticator extends l\Controller {
 			$resp['code'] = 405; // Method Not Allowed
 		}
         else {
+            $resp['token'] = $this->_token;
+            
             $user = new m\Users($this->_uid);
             if($user->isDoubleAuthGA()) {
                 $googleAuth = new ga\GoogleAuthenticator();
