@@ -7,6 +7,8 @@ use \application\models as m;
 use \config as conf;
 
 class GoogleAuthenticator extends l\Controller {
+    private $redis = null;
+
     function __construct() {
 		parent::__construct([
 			'mustBeLogged' => true
@@ -34,40 +36,49 @@ class GoogleAuthenticator extends l\Controller {
 		}
         else {
             $user = new m\Users($this->_uid);
-            
-            $username = $user->getLogin();
-            
-            $googleAuth = new ga\GoogleAuthenticator();
-            $secret = bin2hex(openssl_random_pseudo_bytes(10));
-            $secret = (new ga\FixedBitNotation(5, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', true, true))->encode($secret);
+            if(!($user->isDoubleAuthGA())) { // Cannot regenerate when ga is already enabled
+                $gaRedis = $this->redis->get('uid:'.$this->_uid.':ga');
+                if(!$gaRedis) $gaRedis = 0;
+                $resp['code'] = 200;
+                $resp['status'] = 'success';
 
-            $user->updateSecretKey($secret);
-            $user->deleteBackupCodes();
-            $user->generateBackupCodes();
-            $backupCodes = $user->getBackupCodes();
-            
-            $url = ga\GoogleQrUrl::generate($username, $secret, 'Muonium');
+                if(intval($gaRedis) <= time()) {
+                    $this->redis->set('uid:'.$this->_uid.':ga', time() + 30);
+                    $username = $user->getLogin();
 
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_HEADER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'Muonium');
-            $result = curl_exec($ch);
-            curl_close($ch);
+                    $googleAuth = new ga\GoogleAuthenticator();
+                    $secret = bin2hex(openssl_random_pseudo_bytes(10));
+                    $secret = (new ga\FixedBitNotation(5, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', true, true))->encode($secret);
 
-            $resp['code'] = 200;
-            $resp['status'] = 'success';
-            $resp['data']['QRcode'] = base64_encode($result);
-            $resp['data']['secretKey'] = $secret;
-            $resp['data']['backupCodes'] = $backupCodes;
+                    $user->updateSecretKey($secret);
+                    $user->deleteBackupCodes();
+                    $user->generateBackupCodes();
+                    $backupCodes = $user->getBackupCodes();
+
+                    $url = ga\GoogleQrUrl::generate($username, $secret, 'Muonium');
+
+                    $ch = curl_init();
+                    curl_setopt($ch, CURLOPT_URL, $url);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_HEADER, false);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    curl_setopt($ch, CURLOPT_USERAGENT, 'Muonium');
+                    $result = curl_exec($ch);
+                    curl_close($ch);
+
+                    $resp['data']['QRcode'] = base64_encode($result);
+                    $resp['data']['secretKey'] = $secret;
+                    $resp['data']['backupCodes'] = $backupCodes;
+                } else { // Wait
+                    $resp['message'] = 'wait';
+                }
+            }
         }
 
 		http_response_code($resp['code']);
 		echo json_encode($resp);
     }
-    
+
     public function backupCodesAction() {
         header("Content-type: application/json");
 		$resp = self::RESP;
@@ -82,7 +93,7 @@ class GoogleAuthenticator extends l\Controller {
             if($user->isDoubleAuthGA()) {
                 $googleAuth = new ga\GoogleAuthenticator();
                 $secret = $user->getSecretKeyGA();
-                
+
                 if($user->isCodeValid($data->code)) {
                     $backupCodes = $user->getBackupCodes();
 
@@ -104,7 +115,7 @@ class GoogleAuthenticator extends l\Controller {
 		http_response_code($resp['code']);
 		echo json_encode($resp);
     }
-    
+
     public function regenerateBackupCodesAction() {
         header("Content-type: application/json");
 		$resp = self::RESP;
@@ -119,7 +130,7 @@ class GoogleAuthenticator extends l\Controller {
             if($user->isDoubleAuthGA()) {
                 $googleAuth = new ga\GoogleAuthenticator();
                 $secret = $user->getSecretKeyGA();
-                
+
                 if($user->isCodeValid($data->code)) {
                     $user->generateBackupCodes();
                     $backupCodes = $user->getBackupCodes();
