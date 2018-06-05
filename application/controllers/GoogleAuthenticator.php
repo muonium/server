@@ -30,6 +30,7 @@ class GoogleAuthenticator extends l\Controller {
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
 		$data = h\httpMethodsData::getValues();
+        $resp['token'] = $this->_token;
 
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
@@ -41,7 +42,6 @@ class GoogleAuthenticator extends l\Controller {
                 if(!$gaRedis) $gaRedis = 0;
                 $resp['code'] = 200;
                 $resp['status'] = 'success';
-                $resp['token'] = $this->_token;
 
                 if(intval($gaRedis) <= time()) {
                     $this->redis->set('uid:'.$this->_uid.':ga', time() + 30);
@@ -85,13 +85,12 @@ class GoogleAuthenticator extends l\Controller {
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
 		$data = h\httpMethodsData::getValues();
+        $resp['token'] = $this->_token;
 
 		if($method !== 'get') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
         else {
-            $resp['token'] = $this->_token;
-            
             $user = new m\Users($this->_uid);
             if($user->isDoubleAuthGA()) {
                 $googleAuth = new ga\GoogleAuthenticator();
@@ -124,12 +123,12 @@ class GoogleAuthenticator extends l\Controller {
 		$resp = self::RESP;
 		$method = h\httpMethodsData::getMethod();
 		$data = h\httpMethodsData::getValues();
+        $resp['token'] = $this->_token;
 
 		if($method !== 'post') {
 			$resp['code'] = 405; // Method Not Allowed
 		}
         else {
-            $resp['token'] = $this->_token;
             
             $user = new m\Users($this->_uid);
             if($user->isDoubleAuthGA()) {
@@ -155,8 +154,8 @@ class GoogleAuthenticator extends l\Controller {
                 $resp['message'] = 'notDoubleAuthGA';
             }
         }
-
-		http_response_code($resp['code']);
+		
+        http_response_code($resp['code']);
 		echo json_encode($resp);
     }
 }
