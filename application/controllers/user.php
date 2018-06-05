@@ -160,13 +160,31 @@ class user extends l\Controller {
 			$resp['token'] = $this->_token;
 	        $this->_modelUser = new m\Users($this->_uid);
 	        $s = 0;
-	        if(isset($data->doubleAuth) && ($data->doubleAuth === true || $data->doubleAuth == 'true')) {
-				$s = 1;
+            $isValid = true;
+            $gaEnabled = $this->_modelUser->isDoubleAuthGA();
+	        if(isset($data->doubleAuth) && ($data->doubleAuth === 1 || $data->doubleAuth === 2)) {
+				$s = $data->doubleAuth;
 			}
-	        if($this->_modelUser->updateDoubleAuth($s)) {
-				$resp['code'] = 200;
-				$resp['status'] = 'success';
-	        }
+            if($s === 2 || $gaEnabled) { // Try to enable/disable ga but a code is needed
+                if(!isset($data->code) || !($this->_modelUser->isCodeValid($data->code))) {
+                    $isValid = false; // Empty or wrong code
+                }
+            }
+
+            if($isValid) {
+    	        if($this->_modelUser->updateDoubleAuth($s)) {
+                    if($gaEnabled) {
+                        $this->_modelUser->deleteBackupCodes();
+                        $this->_modelUser->deleteSecretKey();
+                    }
+    				$resp['code'] = 200;
+    				$resp['status'] = 'success';
+    	        }
+            } else {
+                $resp['code'] = 403;
+                $resp['status'] = 'error';
+				$resp['message'] = 'badCode';
+            }
 		}
 
 		http_response_code($resp['code']);
@@ -248,7 +266,7 @@ class user extends l\Controller {
 		$this->_modelUser = new m\Users($this->_uid);
 		$infos = $this->_modelUser->getInfos();
 		if($infos !== false) {
-			$infos['double_auth'] = $infos['double_auth'] == 1 ? true : false;
+			$infos['double_auth'] = ($infos['double_auth'] == 1 || $infos['double_auth'] == 2) ? $infos['double_auth'] : 0;
 			$resp['code'] = 200;
 			$resp['status'] = 'success';
 			$resp['data'] = $infos;
@@ -273,10 +291,6 @@ class user extends l\Controller {
 
 					if(!($this->_modelUser->EmailExists())) {
 						if(!($this->_modelUser->LoginExists())) {
-							if(isset($data->doubleAuth) && ($data->doubleAuth === true || $data->doubleAuth == 'true')) {
-								$this->_modelUser->setDoubleAuth(1);
-							}
-
 							if($this->_modelUser->Insertion()) {
 								// Send registration mail with validation key
 								$uid = $this->_modelUser->getLastInsertedId();

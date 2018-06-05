@@ -1,6 +1,7 @@
 <?php
 namespace application\models;
 use \library\MVC as l;
+use \Muonium\GoogleAuthenticator as ga;
 
 class Users extends l\Model {
     /* users table
@@ -11,8 +12,9 @@ class Users extends l\Model {
         5   registration_date   int(11)
         6   last_connection     int(11)
         7   cek                 varchar(330)
-        8   double_auth         tinyint(1)      0 : Double auth not available for this user, 1 : Double auth available for this user
+        8   double_auth         tinyint(1)      0 : Double auth not available for this user, 1 : Double auth available for this user by mail, 2 : Double auth available for this user by Googla Authenticator
         9   auth_code           varchar(8)
+        10  ga_secret           varchar(32)
     */
 
     protected $id = null;
@@ -109,10 +111,34 @@ class Users extends l\Model {
 
     function getDoubleAuth() {
 		if($this->id === null) return false;
-        $req = self::$_sql->prepare("SELECT double_auth FROM users WHERE id = ? AND double_auth = '1'");
+        $req = self::$_sql->prepare("SELECT double_auth FROM users WHERE id = ? AND (double_auth = 1 OR double_auth = 2)");
         $req->execute([$this->id]);
         if($req->rowCount() === 0) return false;
         return true;
+    }
+
+    function isDoubleAuthGA() {
+        if($this->id === null) return false;
+        $req = self::$_sql->prepare("SELECT double_auth FROM users WHERE id = ? AND double_auth = 2");
+        $req->execute([$this->id]);
+        if($req->rowCount() === 0) return false;
+        return true;
+    }
+
+    function getSecretKeyGA($id = null) {
+        $id = $id === null ? $this->id : $id;
+		if(!is_numeric($id)) return false;
+		$req = self::$_sql->prepare("SELECT ga_secret FROM users WHERE id = ?");
+        $req->execute([$id]);
+        if($req->rowCount() === 0) return false;
+        $res = $req->fetch(\PDO::FETCH_ASSOC);
+        return $res['ga_secret'];
+    }
+
+    function updateSecretKey($secretKey) {
+        if($this->id === null) return false;
+        $req = self::$_sql->prepare("UPDATE users SET ga_secret = ? WHERE id = ?");
+        return $req->execute([$secretKey, $this->id]);
     }
 
     function getCode() {
@@ -176,6 +202,73 @@ class Users extends l\Model {
         return false;
 	}
 
+    function deleteBackupCodes() {
+        if($this->id === null) return false;
+        $req = self::$_sql->prepare("DELETE FROM user_codes WHERE id_user = ?");
+        return $req->execute([$this->id]);
+    }
+
+    function deleteSecretKey() {
+        if($this->id === null) return false;
+        $req = self::$_sql->prepare("UPDATE users SET ga_secret = NULL WHERE id = ?");
+        return $req->execute([$this->id]);
+    }
+
+    function deleteBackupCode($backupCode) {
+        if($this->id === null || $backupCode === null) return false;
+        $req = self::$_sql->prepare("DELETE FROM user_codes WHERE id_user = ? AND code = ?");
+        return $req->execute([$this->id, $backupCode]);
+    }
+
+    function isBackupCodeValid($backupCode) {
+		if($this->id === null || $backupCode === null) return false;
+        $req = self::$_sql->prepare("SELECT id FROM user_codes WHERE id_user = ? AND code = ?");
+        $req->execute([$this->id, $backupCode]);
+        if($req->rowCount()) return true;
+        return false;
+    }
+
+    function isCodeValid($code) {
+        $googleAuth = new ga\GoogleAuthenticator();
+        $secret = $this->getSecretKeyGA();
+
+        if($googleAuth->checkCode($secret, $code)) {
+            return true;
+        } else {
+            if($this->isBackupCodeValid($code)) {
+                $this->deleteBackupCode($code);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function getBackupCodes() {
+        if($this->id === null) return false;
+        $req = self::$_sql->prepare("SELECT code FROM user_codes WHERE id_user = ?");
+        $req->execute([$this->id]);
+        if($req->rowCount() === 0) return false;
+        $res = $req->fetchAll(\PDO::FETCH_COLUMN, 0);
+        return $res;
+    }
+
+    function generateBackupCodes() {
+        $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $charactersLength = strlen($characters);
+
+        for($i = 0; $i < 10; $i++) { //10 codes
+            $backupCode = "";
+            for ($j = 0; $j < 10; $j++) { //10 chars each
+                $backupCode .= $characters[rand(0, $charactersLength - 1)];
+            }
+            $status = $this->insert('user_codes', [
+                'id' => null,
+                'id_user' => $this->id,
+                'code' => $backupCode
+            ]);
+        }
+    }
+
     function updateLogin() {
 		if($this->id === null) return false;
         $req = self::$_sql->prepare("UPDATE users SET login = ? WHERE id = ?");
@@ -196,7 +289,7 @@ class Users extends l\Model {
     }
 
     function updateDoubleAuth($state) {
-		if($this->id === null || ($state != 0 && $state != 1)) return false;
+		if($this->id === null || ($state != 0 && $state != 1 && $state != 2)) return false;
         $req = self::$_sql->prepare("UPDATE users SET double_auth = ? WHERE id = ?");
         return $req->execute([$state, $this->id]);
     }
