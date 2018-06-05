@@ -130,7 +130,8 @@ CREATE TABLE `users` (
   `last_connection` int(11) NOT NULL,
   `cek` varchar(330) NOT NULL,
   `double_auth` tinyint(1) NOT NULL,
-  `auth_code` varchar(8) NOT NULL
+  `auth_code` varchar(8) NOT NULL,
+  `ga_secret` varchar(32) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -156,6 +157,18 @@ CREATE TABLE `user_validation` (
   `id` int(11) NOT NULL,
   `id_user` int(11) NOT NULL,
   `val_key` varchar(128) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_codes`
+--
+
+CREATE TABLE `user_codes` (
+  `id` int(11) NOT NULL,
+  `id_user` int(11) NOT NULL,
+  `code` varchar(10) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
@@ -203,6 +216,12 @@ ALTER TABLE `upgrade`
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`);
+  
+  --
+-- Indexes for table `user_codes`
+--
+ALTER TABLE `user_codes`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -256,6 +275,12 @@ ALTER TABLE `upgrade`
 --
 ALTER TABLE `users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  
+  --
+-- AUTO_INCREMENT for table `user_codes`
+--
+ALTER TABLE `user_codes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 --
 -- AUTO_INCREMENT for table `user_lostpass`
 --
