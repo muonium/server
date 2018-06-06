@@ -285,6 +285,7 @@ class user extends l\Controller {
 				if(preg_match("/^[A-Za-z0-9_.-]{2,19}$/", $data->login)) {
 					$this->_modelUser = new m\Users();
 					$this->_modelUser->email = htmlspecialchars($data->mail);
+                    $this->_modelUser->lang = self::$userLanguage;
 					$this->_modelUser->password = password_hash(urldecode($data->password), PASSWORD_BCRYPT);
 					$this->_modelUser->login = htmlspecialchars($data->login);
 					$this->_modelUser->cek = htmlspecialchars($data->cek);

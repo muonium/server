@@ -9,18 +9,20 @@ class Users extends l\Model {
         2   login               varchar(20)
         3   password            varchar(128)
         4   email               varchar(254)
-        5   registration_date   int(11)
-        6   last_connection     int(11)
-        7   cek                 varchar(330)
-        8   double_auth         tinyint(1)      0 : Double auth not available for this user, 1 : Double auth available for this user by mail, 2 : Double auth available for this user by Googla Authenticator
-        9   auth_code           varchar(8)
-        10  ga_secret           varchar(32)
+        5   lang                varchar(6)
+        6   registration_date   int(11)
+        7   last_connection     int(11)
+        8   cek                 varchar(330)
+        9   double_auth         tinyint(1)      0 : Double auth not available for this user, 1 : Double auth available for this user by mail, 2 : Double auth available for this user by Googla Authenticator
+        10  auth_code           varchar(8)
+        11  ga_secret           varchar(32)
     */
 
     protected $id = null;
     protected $login;
     protected $password;
     protected $email;
+    protected $lang = null;
 	protected $cek;
     protected $doubleAuth = 0;
     protected $code;
@@ -185,7 +187,7 @@ class Users extends l\Model {
 			'login' => $this->login,
 			'password' => $this->password,
 			'email' => $this->email,
-            'lang' => null,
+            'lang' => $this->lang,
 			'registration_date' => time(),
 			'last_connection' => time(),
 			'cek' => $this->cek,
@@ -332,6 +334,8 @@ class Users extends l\Model {
 
 	function deleteUser() {
 		if($this->id === null) return false;
+        $req = self::$_sql->prepare("DELETE FROM user_codes WHERE id_user = ?");
+        $req->execute([$this->id]);
         $req = self::$_sql->prepare("DELETE FROM users WHERE id = ?");
         return $req->execute([$this->id]);
     }
