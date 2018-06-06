@@ -291,6 +291,7 @@ class user extends l\Controller {
 
 					if(!($this->_modelUser->EmailExists())) {
 						if(!($this->_modelUser->LoginExists())) {
+                            self::loadLanguage();
 							if($this->_modelUser->Insertion()) {
 								// Send registration mail with validation key
 								$uid = $this->_modelUser->getLastInsertedId();

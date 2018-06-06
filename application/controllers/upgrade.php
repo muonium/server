@@ -35,6 +35,7 @@ class upgrade extends l\Controller {
 			$resp['data']['plans'] = [];
 			$merchant_id = conf\confPayments::merchant_id;
 			$ipn_url = conf\confPayments::ipn_url;
+            self::loadLanguage();
 
 			$storage_plans = $this->_modelStoragePlans->getPlans();
 			foreach($storage_plans as $plan) {

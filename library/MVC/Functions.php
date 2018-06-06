@@ -17,6 +17,7 @@ function showSize($size, $precision = 2) {
 	if(!is_numeric($size)) return 0;
 	if($size <= 0) return 0;
 	$base = log($size, 1000);
+    // We need to load language to get units but this method is only called on plansAction which already loads it
 	$suffixes = array_values((array)\library\MVC\Controller::$txt->Units);
 	return round(pow(1000, $base - floor($base)), $precision) .' '. $suffixes[floor($base)];
 }

@@ -313,18 +313,21 @@ class Users extends l\Model {
 	}
 
     function getLang() {
-		if($this->id === null) return 'en';
+		if($this->id === null) return DEFAULT_LANGUAGE;
 	    $req = self::$_sql->prepare("SELECT lang FROM users WHERE id = ?");
         $req->execute([$this->id]);
-        if($req->rowCount() === 0) return 'en';
+        if($req->rowCount() === 0) return DEFAULT_LANGUAGE;
         $res = $req->fetch(\PDO::FETCH_ASSOC);
-        return ($res['lang'] === null || $res['lang'] == '') ? 'en' : $res['lang'];
+        return ($res['lang'] === null || $res['lang'] == '') ? DEFAULT_LANGUAGE : $res['lang'];
 	}
 
     function setLang($lang) {
 		if($this->id === null) return false;
-	    $req = self::$_sql->prepare("UPDATE users SET lang = ? WHERE id = ?");
-	    return $req->execute([$lang, $this->id]);
+        if(file_exists(DIR_LANGUAGE.$lang.".json")) { // Check if the lang exists
+	        $req = self::$_sql->prepare("UPDATE users SET lang = ? WHERE id = ?");
+	        return $req->execute([$lang, $this->id]);
+        }
+        return false;
 	}
 
 	function deleteUser() {

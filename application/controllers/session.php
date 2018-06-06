@@ -193,6 +193,7 @@ class session extends l\Controller {
                             if($new_user->getDoubleAuth()) {
                                 if(!$new_user->isDoubleAuthGA()) {
                                     // Double auth : send an email with a code
+                                    self::loadLanguage();
                                     $code = $this->generateCode();
                                     $mail = new l\Mail();
                                     $mail->delay(60, $id, $this->getRedis());

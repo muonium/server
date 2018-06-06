@@ -45,17 +45,15 @@ class Controller {
 				}
             }
         }
-        // Get user language
-		$lang = isset($_SERVER['HTTP_CLIENT_LANGUAGE']) ? htmlspecialchars($_SERVER['HTTP_CLIENT_LANGUAGE']) : DEFAULT_LANGUAGE;
-        self::loadLanguage($lang);
+        self::$userLanguage = isset($_SERVER['HTTP_CLIENT_LANGUAGE']) ? htmlspecialchars($_SERVER['HTTP_CLIENT_LANGUAGE']) : DEFAULT_LANGUAGE;
     }
 
-	public static function loadLanguage($lang) {
-		$resp = self::RESP;
-		if(file_exists(DIR_LANGUAGE.$lang.".json")) {
-			$_json = file_get_contents(DIR_LANGUAGE.$lang.".json");
-			self::$userLanguage = $lang;
-		} elseif($lang === DEFAULT_LANGUAGE) {
+	public static function loadLanguage() {
+        $resp = self::RESP;
+        if(self::$txt !== null) return true; // Already loaded
+		if(file_exists(DIR_LANGUAGE.self::$userLanguage.".json")) {
+			$_json = file_get_contents(DIR_LANGUAGE.self::$userLanguage.".json");
+		} elseif(self::$userLanguage === DEFAULT_LANGUAGE) {
 			header("Content-type: application/json");
 			$resp['code'] = 400;
 			$resp['message'] = 'Unable to load DEFAULT_LANGUAGE JSON !';
@@ -65,9 +63,9 @@ class Controller {
 			self::loadLanguage(DEFAULT_LANGUAGE);
 		}
 
-		self::$txt = json_decode($_json);
+		$decoded = json_decode($_json);
 		if(json_last_error() !== 0) {
-			if($lang === DEFAULT_LANGUAGE) {
+			if(self::$userLanguage === DEFAULT_LANGUAGE) {
 				header("Content-type: application/json");
 				$resp['code'] = 400;
 				$resp['message'] = 'Error in the DEFAULT_LANGUAGE JSON !';
@@ -76,6 +74,7 @@ class Controller {
 			}
 			self::loadLanguage(DEFAULT_LANGUAGE);
 		}
+        self::$txt = $decoded;
 		return true;
 	}
 

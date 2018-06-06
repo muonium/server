@@ -64,7 +64,8 @@ Your code must be tested before to be merged in the master branch.
         - Method and params are not necessary
         - If you do not specify a method, the method "DefaultAction" will be called if it exists.
     - Methods with the "Action" suffixe are specific methods which can be called by the URL, for exemple "addAction" in "folders" controller will be called with the URL "http://[...]/folders/add". Others methods can't be called by the URL.
-    - All controllers extends library\MVC\Controller.php class which provides sessions management and useful vars like $_uid, $_token, $_jti and also gets the user's language json and store it in public static var "$txt".
+    - All controllers extends library\MVC\Controller.php class which provides sessions management and useful vars like $_uid, $_token, $_jti
+    - loadLanguage method gets the user's language json and store it in public static var "$txt".
     - All models extends library\MVC\Model.php class which gets the sql connection in protected static var "$_sql".
     - We use namespaces, PHP files must start with <?php namespace [...]; ([...] = path to the file's folder from MVC root folder)
         - For a example, for a controller : <?php namespace application\controllers;

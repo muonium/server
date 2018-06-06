@@ -87,6 +87,7 @@ class lostpass extends l\Controller {
 					$this->_modelUser = new m\Users($this->uid);
 
 					if($user_mail = $this->_modelUser->getEmail()) {
+                        self::loadLanguage();
 						$resp['code'] = 200;
 						$resp['status'] = 'success';
 
