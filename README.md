@@ -4,7 +4,7 @@
 - Composer
 - HTTPD Apache, 2.4 preferred
 - PHP 5.6 / 7.0+
-- PHP mcrypt extension
+- PHP mcrypt and curl extensions
 
 # License
 Read the license please : [here](https://raw.githubusercontent.com/muonium/server/master/LICENSE)

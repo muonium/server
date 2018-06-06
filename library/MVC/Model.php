@@ -10,7 +10,6 @@ class Model {
         self::$_sql = new \PDO('mysql:host='.conf\confDB::host.';dbname='.conf\confDB::db,conf\confDB::user,conf\confDB::password);
         self::$_sql->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         self::$_sql->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
-        self::$_sql->setAttribute(\PDO::ATTR_STRINGIFY_FETCHES, false);
     }
 
     public static function getInstance() {
